@@ -1,3 +1,3 @@
-package com.testingSpringAI.Model;
+package com.barbershopAIConsultant.Model;
 
 public record Question(String question) {}

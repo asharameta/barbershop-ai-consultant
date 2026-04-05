@@ -1,11 +1,10 @@
-package com.testingSpringAI.Config;
+package com.barbershopAIConsultant.Config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.testingSpringAI.Utils.BarbershopFileParser;
+import com.barbershopAIConsultant.Utils.BarbershopFileParser;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
-import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
@@ -35,19 +34,13 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.testingSpringAI.Utils.BarbershopFileParser.parseFileName;
+import static com.barbershopAIConsultant.Utils.BarbershopFileParser.parseFileName;
 
 @Configuration
 public class BarberClientConfig {
 
     @Value("${spring.ai.openai.api-key}")
     String API_KEY;
-
-    @Value("${spring.ai.base-url}")
-    private String baseUrl;
-
-    @Value("${spring.ai.model}")
-    private String model;
 
     @Bean
     public ObjectMapper objectMapper(){
@@ -74,14 +67,14 @@ public class BarberClientConfig {
     public OpenAiApi openAiApi() {
         return OpenAiApi.builder()
                 .apiKey(API_KEY)
-                .baseUrl(baseUrl)
+                .baseUrl("https://api.openai.com")
                 .build();
     }
 
     @Bean
     public OpenAiChatModel chatModel(OpenAiApi openAiApi) {
         OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .model(model)
+                .model("gpt-5.4-nano")
                 .temperature(1.0)
                 .topP(1.0)
                 .maxCompletionTokens(1000)
@@ -121,7 +114,6 @@ public class BarberClientConfig {
         return new CallAdvisor() {
             @Override
             public ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain callAdvisorChain) {
-                System.out.println("RAG filter expression: "+searchRequest.getFilterExpression());
                 return callAdvisorChain.nextCall(chatClientRequest);
             }
 
@@ -175,12 +167,8 @@ public class BarberClientConfig {
                                                         .withMaxNumChunks(10000)
                                                         .withKeepSeparator(true)
                                                         .build();
-
-                //можно помечать/создавать метаданные к каждому документу
-                //https://docs.spring.io/spring-ai/reference/api/vectordbs.html#metadata-filters
                 for (Resource resource : resources) {
                     String filename = resource.getFilename();
-                    System.out.println("currently splitting: " + filename);
                     BarbershopFileParser.BarbershopMetadata metadata = parseFileName(filename);
 
                     TikaDocumentReader reader = new TikaDocumentReader(resource);

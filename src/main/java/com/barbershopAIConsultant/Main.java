@@ -1,4 +1,4 @@
-package com.testingSpringAI;
+package com.barbershopAIConsultant;
 
 public class Main {
     public static void main(String[] args) {

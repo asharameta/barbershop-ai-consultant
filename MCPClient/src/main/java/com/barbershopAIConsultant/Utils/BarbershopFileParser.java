@@ -1,4 +1,4 @@
-package com.testingSpringAI.Utils;
+package com.barbershopAIConsultant.Utils;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
