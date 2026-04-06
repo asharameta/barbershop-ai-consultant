@@ -1,3 +1,2 @@
-rootProject.name = 'spring-ai-lab'
+rootProject.name = 'barbershop-ai-consultant'
 include 'MCPClient', 'MCPServer'
-

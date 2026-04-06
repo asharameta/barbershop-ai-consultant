@@ -38,7 +38,6 @@ import static com.barbershopAIConsultant.Utils.BarbershopFileParser.parseFileNam
 
 @Configuration
 public class BarberClientConfig {
-
     @Value("${spring.ai.openai.api-key}")
     String API_KEY;
 
@@ -48,9 +47,9 @@ public class BarberClientConfig {
     }
 
     @Bean
-    public EmbeddingModel embeddingModel(){
+    public EmbeddingModel embeddingModel(OpenAiApi openAiApi){
         return new OpenAiEmbeddingModel(
-                openAiApi(),
+                openAiApi,
                 MetadataMode.EMBED,
                 OpenAiEmbeddingOptions.builder()
                         .model("text-embedding-3-small")
@@ -59,8 +58,8 @@ public class BarberClientConfig {
     }
 
     @Bean
-    public VectorStore vectorStore(){
-        return SimpleVectorStore.builder(embeddingModel()).build();
+    public VectorStore vectorStore(EmbeddingModel embeddingModel){
+        return SimpleVectorStore.builder(embeddingModel).build();
     }
 
     @Bean
@@ -149,7 +148,6 @@ public class BarberClientConfig {
     CommandLineRunner ingestDocuments(VectorStore vectorStore) {
         return args -> {
             try {
-                System.out.println("Start process of reading documents into vector store...");
                 PathMatchingResourcePatternResolver resolver =
                         new PathMatchingResourcePatternResolver();
                 Resource[] resources = resolver.getResources("classpath:/docs/*");

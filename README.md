@@ -23,32 +23,32 @@ Java 21, Spring Boot, Spring AI, OpenAI API, RAG, MCP, PostgreSQL, Gradle
 
 ## How to Run
 
-MCPServer must be started before MCPClient.
-
-**1. Set up environment variables**
-
-Set your OpenAI API key in IntelliJ run configuration or as an 
-environment variable:
-
-`OPENAI_API_KEY=your_key_here`
-
-**2. Start MCPServer**
-```bash
-cd MCPServer
-./gradlew bootRun
+**0. Create `.env` file in project root**
+```env
+OPENAI_API_KEY=your-key-here
+POSTGRES_URL=your-url-here
+POSTGRES_USERNAME=your-username-here
+POSTGRES_PASSWORD=your-password-here
 ```
 
-**3. Start MCPClient**
+You can also find `.env.example` file in project root
+
+**1. Build and start**
 ```bash
-cd MCPClient
-./gradlew bootRun
+./start.sh
 ```
 
-**4. Send a query**
+or just straight
+
+```powershell
+./gradlew bootJar; docker compose up -d --build
+```
+
+**2. Send a query**
 ```bash
 curl -X POST http://localhost:8080/chat \
   -H "Content-Type: application/json" \
-  -d '{"message": "What haircut services do you offer?"}'
+  -d '{"question": "What haircut services do you offer?"}'
 ```
 
 ## Why RAG?

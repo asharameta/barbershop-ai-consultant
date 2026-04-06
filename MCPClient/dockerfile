@@ -1,0 +1,5 @@
+ARG MODULE
+FROM eclipse-temurin:21-jdk
+WORKDIR /mcpClient
+COPY ${MODULE}/build/libs/*.jar mcpClient.jar
+ENTRYPOINT ["java", "-jar", "mcpClient.jar"]
