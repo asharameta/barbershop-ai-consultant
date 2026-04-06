@@ -32,6 +32,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.barbershopAIConsultant.Utils.BarbershopFileParser.parseFileName;
@@ -100,28 +101,12 @@ public class BarberClientConfig {
         return ChatClient.builder(chatModel)
                 .defaultToolCallbacks(tools.getToolCallbacks())
                 .defaultAdvisors(
-                        loggingAdvisor(searchRequest),       // logs filter
                         QuestionAnswerAdvisor.builder(vectorStore)
                                 .searchRequest(searchRequest)
                                 .build()
                 )
                 .defaultSystem(buildSystemPrompt(barbershopName, barbershopLocation))
                 .build();
-    }
-
-    private CallAdvisor loggingAdvisor(SearchRequest searchRequest) {
-        return new CallAdvisor() {
-            @Override
-            public ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain callAdvisorChain) {
-                return callAdvisorChain.nextCall(chatClientRequest);
-            }
-
-            @Override
-            public String getName() { return "LoggingAdvisor"; }
-
-            @Override
-            public int getOrder() { return Ordered.HIGHEST_PRECEDENCE; }
-        };
     }
 
     private String buildSystemPrompt(String barbershopName, String location) {
@@ -157,7 +142,6 @@ public class BarberClientConfig {
                     return;
                 }
 
-                List<Document> allChunks = new ArrayList<>();
                 TextSplitter splitter = TokenTextSplitter.builder()
                                                         .withChunkSize(300)
                                                         .withMinChunkSizeChars(100)
@@ -165,30 +149,26 @@ public class BarberClientConfig {
                                                         .withMaxNumChunks(10000)
                                                         .withKeepSeparator(true)
                                                         .build();
-                for (Resource resource : resources) {
-                    String filename = resource.getFilename();
-                    BarbershopFileParser.BarbershopMetadata metadata = parseFileName(filename);
-
-                    TikaDocumentReader reader = new TikaDocumentReader(resource);
-                    List<Document> documents = reader.read();
-                    if(metadata != null){
-                        for (Document doc : documents) {
-                            doc.getMetadata().put("barbershop_name", metadata.barbershopName().toLowerCase());
-                            doc.getMetadata().put("barbershop_city", metadata.city().toLowerCase());
-                            doc.getMetadata().put("barbershop_category", metadata.category().toLowerCase());
-                        }
-                    }
-
-                    List<Document> chunks = splitter.split(documents);
-                    allChunks.addAll(chunks);
-                }
+                List<Document> allChunks = Arrays.stream(resources)
+                        .flatMap(resource -> {
+                            BarbershopFileParser.BarbershopMetadata metadata = parseFileName(resource.getFilename());
+                            List<Document> documents = new TikaDocumentReader(resource).read();
+                            if (metadata != null) {
+                                documents.forEach(doc -> {
+                                    doc.getMetadata().put("barbershop_name", metadata.barbershopName().toLowerCase());
+                                    doc.getMetadata().put("barbershop_city", metadata.city().toLowerCase());
+                                    doc.getMetadata().put("barbershop_category", metadata.category().toLowerCase());
+                                });
+                            }
+                            return splitter.split(documents).stream();
+                        })
+                        .toList();
 
                 vectorStore.add(allChunks);
                 System.out.println("Parsed " + allChunks.size() + " chunks into vector store.");
 
             } catch (Exception e) {
-                System.err.println("Error loading documents: " + e.getMessage());
-                e.printStackTrace();
+                throw new RuntimeException("Failed to ingest documents into vector store", e);
             }
         };
     }
