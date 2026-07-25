@@ -1,3 +1,5 @@
+![CI](https://github.com/asharameta/barbershop-ai-consultant/actions/workflows/ci.yml/badge.svg)
+
 # Barbershop AI Consultant
 
 An AI-powered REST API chatbot for a barbershop that answers questions
