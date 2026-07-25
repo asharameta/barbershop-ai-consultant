@@ -1,3 +1,3 @@
-package com.barbershopAIConsultant.Model;
+package com.asharameta.barbershop.model;
 
 public record Question(String question) {}

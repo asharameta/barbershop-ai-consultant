@@ -1,21 +1,16 @@
-package com.barbershopAIConsultant.Config;
+package com.asharameta.barbershop.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.barbershopAIConsultant.Utils.BarbershopFileParser;
+import com.asharameta.barbershop.utils.BarbershopFileParser.BarbershopMetadata;
+import static com.asharameta.barbershop.utils.BarbershopFileParser.parseFileName;
+
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.ChatClientRequest;
-import org.springframework.ai.chat.client.ChatClientResponse;
-import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
-import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
-import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.document.MetadataMode;
-import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.transformer.splitter.TextSplitter;
@@ -27,15 +22,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
-import static com.barbershopAIConsultant.Utils.BarbershopFileParser.parseFileName;
 
 @Configuration
 public class BarberClientConfig {
@@ -43,54 +37,43 @@ public class BarberClientConfig {
     String API_KEY;
 
     @Bean
+    OpenAiChatModel openAiChatModel(){
+        return OpenAiChatModel.builder()
+                .options(OpenAiChatOptions.builder()
+                        .apiKey(API_KEY)
+                        .model("gpt-5.4-nano")
+                        .temperature(0.4)
+                        .build())
+                .build();
+    }
+
+    @Bean
+    OpenAiEmbeddingModel openAiEmbeddingModel(){
+        return OpenAiEmbeddingModel.builder()
+                .metadataMode(MetadataMode.EMBED)
+                .options(OpenAiEmbeddingOptions.builder()
+                        .apiKey(API_KEY)
+                        .model("text-embedding-3-small")
+                        .build())
+                .build();
+
+    }
+
+    @Bean
     public ObjectMapper objectMapper(){
         return new ObjectMapper();
     }
 
     @Bean
-    public EmbeddingModel embeddingModel(OpenAiApi openAiApi){
-        return new OpenAiEmbeddingModel(
-                openAiApi,
-                MetadataMode.EMBED,
-                OpenAiEmbeddingOptions.builder()
-                        .model("text-embedding-3-small")
-                        .build()
-        );
+    public VectorStore vectorStore(OpenAiEmbeddingModel openAiEmbeddingModel){
+        return SimpleVectorStore.builder(openAiEmbeddingModel).build();
     }
 
     @Bean
-    public VectorStore vectorStore(EmbeddingModel embeddingModel){
-        return SimpleVectorStore.builder(embeddingModel).build();
-    }
-
-    @Bean
-    public OpenAiApi openAiApi() {
-        return OpenAiApi.builder()
-                .apiKey(API_KEY)
-                .baseUrl("https://api.openai.com")
-                .build();
-    }
-
-    @Bean
-    public OpenAiChatModel chatModel(OpenAiApi openAiApi) {
-        OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .model("gpt-5.4-nano")
-                .temperature(1.0)
-                .topP(1.0)
-                .maxCompletionTokens(1000)
-                .build();
-
-        return OpenAiChatModel.builder()
-                .openAiApi(openAiApi)
-                .defaultOptions(options)
-                .build();
-    }
-
-    @Bean
-    public ChatClient chatClientMCP(OpenAiChatModel chatModel,
+    public ChatClient chatClient(OpenAiChatModel openAiChatModel,
                                     ToolCallbackProvider tools,
                                     VectorStore vectorStore) {
-        String barbershopName = "gentelman";
+        String barbershopName = "gentleman";
         String barbershopLocation = "warsaw";
         String barbershopCategory = "booking";
 
@@ -98,14 +81,14 @@ public class BarberClientConfig {
                 .filterExpression("barbershop_category == '" + barbershopCategory + "'")
                 .build();
 
-        return ChatClient.builder(chatModel)
-                .defaultToolCallbacks(tools.getToolCallbacks())
-                .defaultAdvisors(
-                        QuestionAnswerAdvisor.builder(vectorStore)
-                                .searchRequest(searchRequest)
-                                .build()
-                )
+        var qaAdvisor = QuestionAnswerAdvisor.builder(vectorStore)
+                .searchRequest(searchRequest)
+                .build();
+
+        return ChatClient.builder(openAiChatModel)
                 .defaultSystem(buildSystemPrompt(barbershopName, barbershopLocation))
+                .defaultAdvisors(qaAdvisor)
+                .defaultTools(tools)
                 .build();
     }
 
@@ -151,7 +134,7 @@ public class BarberClientConfig {
                                                         .build();
                 List<Document> allChunks = Arrays.stream(resources)
                         .flatMap(resource -> {
-                            BarbershopFileParser.BarbershopMetadata metadata = parseFileName(resource.getFilename());
+                            BarbershopMetadata metadata = parseFileName(Objects.requireNonNull(resource.getFilename()));
                             List<Document> documents = new TikaDocumentReader(resource).read();
                             if (metadata != null) {
                                 documents.forEach(doc -> {

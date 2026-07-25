@@ -1,6 +1,6 @@
-package com.barbershopAIConsultant.Config;
+package com.asharameta.barbershop.config;
 
-import com.barbershopAIConsultant.Service.BarberService;
+import com.asharameta.barbershop.service.BarberService;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Value;

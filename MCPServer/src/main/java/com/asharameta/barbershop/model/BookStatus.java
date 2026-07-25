@@ -1,4 +1,4 @@
-package com.barbershopAIConsultant.Model;
+package com.asharameta.barbershop.model;
 
 public enum BookStatus {
     BOOKED,

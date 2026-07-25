@@ -1,4 +1,4 @@
-package com.barbershopAIConsultant.Utils;
+package com.asharameta.barbershop.utils;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;

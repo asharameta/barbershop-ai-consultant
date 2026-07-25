@@ -1,5 +1,7 @@
-package com.barbershopAIConsultant.Model;
+package com.asharameta.barbershop.dao;
 
+import com.asharameta.barbershop.model.Appointment;
+import com.asharameta.barbershop.model.BookStatus;
 import lombok.AllArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;

@@ -1,8 +1,7 @@
-package com.barbershopAIConsultant.Service;
+package com.asharameta.barbershop.service;
 
-import com.barbershopAIConsultant.Model.Appointment;
-import com.barbershopAIConsultant.Model.AppointmentDAO;
-import com.barbershopAIConsultant.Model.BookStatus;
+import com.asharameta.barbershop.dao.AppointmentDAO;
+import com.asharameta.barbershop.model.*;
 import lombok.AllArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -16,12 +15,6 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class BarberService {
     private final AppointmentDAO appointmentDAO;
-
-    @Tool(description = "Say hello to a person by name. Returns a greeting message.")
-    public String sayHello(
-            @ToolParam(description = "The name of the person to greet") String name) {
-        return "Hello, " + name + "!";
-    }
 
     @Tool(description = "Book an appointment with a barber")
     public String bookAppointment(
