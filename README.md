@@ -14,14 +14,13 @@ Two modules that run independently:
 
 - MCPServer — exposes the barbershop knowledge base and booking 
   logic via Model Context Protocol (MCP).
-  Tools: `sayHello`, `bookAppointment`, 
-  `cancelAppointment`, `getClientAppointments`, `getBarberSchedule`.
+  Tools: `bookAppointment`, `cancelAppointment`, `getClientAppointments`, `getBarberSchedule`.
   
 - MCPClient — Spring Boot REST API, handles user queries, 
   retrieves context via RAG (SimpleVectorStore), calls OpenAI to generate responses.
 
 ## Tech Stack
-Java 21, Spring Boot, Spring AI, OpenAI API, RAG, MCP, PostgreSQL, Gradle
+Java 21, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL, Gradle
 
 ## How to Run
 
