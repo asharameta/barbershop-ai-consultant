@@ -1,46 +1,50 @@
 package com.asharameta.barbershop.config;
 
+import com.asharameta.barbershop.knowledgebase.KnowledgeBaseLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.asharameta.barbershop.utils.BarbershopFileParser.BarbershopMetadata;
-import static com.asharameta.barbershop.utils.BarbershopFileParser.parseFileName;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.document.Document;
 import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
-import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.core.io.support.ResourcePatternResolver;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.Locale;
 
 
 @Configuration
 public class BarberClientConfig {
     @Value("${spring.ai.openai.api-key}")
-    String API_KEY;
+    String apiKey;
+
+    @Value("${asharameta.barbershop.name}")
+    String barbershopName;
+
+    @Value("${asharameta.barbershop.city}")
+    String barbershopCity;
+
+    @Value("${asharameta.barbershop.knowledge-base.resource-pattern}")
+    String resourcePattern;
 
     @Bean
     OpenAiChatModel openAiChatModel(){
         return OpenAiChatModel.builder()
                 .options(OpenAiChatOptions.builder()
-                        .apiKey(API_KEY)
+                        .apiKey(apiKey)
                         .model("gpt-5.4-nano")
                         .temperature(0.4)
                         .build())
@@ -52,7 +56,7 @@ public class BarberClientConfig {
         return OpenAiEmbeddingModel.builder()
                 .metadataMode(MetadataMode.EMBED)
                 .options(OpenAiEmbeddingOptions.builder()
-                        .apiKey(API_KEY)
+                        .apiKey(apiKey)
                         .model("text-embedding-3-small")
                         .build())
                 .build();
@@ -72,13 +76,16 @@ public class BarberClientConfig {
     @Bean
     public ChatClient chatClient(OpenAiChatModel openAiChatModel,
                                     ToolCallbackProvider tools,
-                                    VectorStore vectorStore) {
-        String barbershopName = "gentleman";
-        String barbershopLocation = "warsaw";
-        String barbershopCategory = "booking";
-
+                                    VectorStore vectorStore)
+    {
+        FilterExpressionBuilder b = new FilterExpressionBuilder();
         var searchRequest = SearchRequest.builder()
-                .filterExpression("barbershop_category == '" + barbershopCategory + "'")
+                .filterExpression(b.and(
+                        b.in("barbershop_name", barbershopName.toLowerCase(Locale.ROOT)),
+                        b.in("barbershop_city", barbershopCity.toLowerCase(Locale.ROOT))
+                ).build())
+                .topK(5)
+                .similarityThreshold(0.3)
                 .build();
 
         var qaAdvisor = QuestionAnswerAdvisor.builder(vectorStore)
@@ -86,13 +93,13 @@ public class BarberClientConfig {
                 .build();
 
         return ChatClient.builder(openAiChatModel)
-                .defaultSystem(buildSystemPrompt(barbershopName, barbershopLocation))
+                .defaultSystem(buildSystemPrompt())
                 .defaultAdvisors(qaAdvisor)
                 .defaultTools(tools)
                 .build();
     }
 
-    private String buildSystemPrompt(String barbershopName, String location) {
+    private String buildSystemPrompt() {
         return String.format("""
         You are a helpful assistant for %s barbershop.
         Location: %s
@@ -109,50 +116,29 @@ public class BarberClientConfig {
         You have access to MCP tools and barbershop information. Use them wisely.
         
         If you don't have answer just say it, never send empty response back.
-        """, barbershopName, location);
+        """, barbershopName, barbershopCity);
     }
 
     @Bean
-    CommandLineRunner ingestDocuments(VectorStore vectorStore) {
+    public TextSplitter splitter(){
+        return TokenTextSplitter.builder()
+                .withChunkSize(300)
+                .withMinChunkSizeChars(100)
+                .withMinChunkLengthToEmbed(50)
+                .withMaxNumChunks(10000)
+                .withKeepSeparator(true)
+                .build();
+    }
+
+    @Bean
+    public KnowledgeBaseLoader knowledgeBaseLoader(TextSplitter splitter, ResourcePatternResolver resolver){
+        return new KnowledgeBaseLoader(resourcePattern, splitter, resolver);
+    }
+
+    @Bean
+    CommandLineRunner ingestDocuments(VectorStore vectorStore, KnowledgeBaseLoader knowledgeBaseLoader) {
         return args -> {
-            try {
-                PathMatchingResourcePatternResolver resolver =
-                        new PathMatchingResourcePatternResolver();
-                Resource[] resources = resolver.getResources("classpath:/docs/*");
-
-                if (resources.length == 0) {
-                    System.err.println("No documents found in /docs/ directory!");
-                    return;
-                }
-
-                TextSplitter splitter = TokenTextSplitter.builder()
-                                                        .withChunkSize(300)
-                                                        .withMinChunkSizeChars(100)
-                                                        .withMinChunkLengthToEmbed(50)
-                                                        .withMaxNumChunks(10000)
-                                                        .withKeepSeparator(true)
-                                                        .build();
-                List<Document> allChunks = Arrays.stream(resources)
-                        .flatMap(resource -> {
-                            BarbershopMetadata metadata = parseFileName(Objects.requireNonNull(resource.getFilename()));
-                            List<Document> documents = new TikaDocumentReader(resource).read();
-                            if (metadata != null) {
-                                documents.forEach(doc -> {
-                                    doc.getMetadata().put("barbershop_name", metadata.barbershopName().toLowerCase());
-                                    doc.getMetadata().put("barbershop_city", metadata.city().toLowerCase());
-                                    doc.getMetadata().put("barbershop_category", metadata.category().toLowerCase());
-                                });
-                            }
-                            return splitter.split(documents).stream();
-                        })
-                        .toList();
-
-                vectorStore.add(allChunks);
-                System.out.println("Parsed " + allChunks.size() + " chunks into vector store.");
-
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to ingest documents into vector store", e);
-            }
+            vectorStore.add(knowledgeBaseLoader.loadDocuments());
         };
     }
 

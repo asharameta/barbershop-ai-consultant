@@ -1,7 +1,4 @@
-package com.asharameta.barbershop.utils;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
+package com.asharameta.barbershop.knowledgebase;
 
 public class BarbershopFileParser {
     private static final String SECTION_DELIMITER = "__";
@@ -83,53 +80,5 @@ public class BarbershopFileParser {
         }
 
         return new BarbershopMetadata(barbershopName, city, category, fileName);
-    }
-
-    /**
-     * Extracts metadata from a file path
-     *
-     * @param filePath the full file path
-     * @return BarbershopMetadata or null if pattern doesn't match
-     */
-    public static BarbershopMetadata parseFilePath(String filePath) {
-        Path path = Paths.get(filePath);
-        String fileName = path.getFileName().toString();
-        return parseFileName(fileName);
-    }
-
-    /**
-     * Extracts just the barbershop name from file name
-     */
-    public static String extractBarbershopName(String fileName) {
-        BarbershopMetadata metadata = parseFileName(fileName);
-        return metadata != null ? metadata.barbershopName() : null;
-    }
-
-    /**
-     * Extracts just the city from file name
-     */
-    public static String extractCity(String fileName) {
-        BarbershopMetadata metadata = parseFileName(fileName);
-        return metadata != null ? metadata.city() : null;
-    }
-
-    /**
-     * Extracts just the category from file name
-     */
-    public static String extractCategory(String fileName) {
-        BarbershopMetadata metadata = parseFileName(fileName);
-        return metadata != null ? metadata.category() : null;
-    }
-
-    /**
-     * Generates a valid file name from components
-     *
-     * @param barbershopName the barbershop name (can contain single underscores)
-     * @param city the city name (can contain single underscores)
-     * @param category the category (can contain single underscores)
-     * @return formatted file name
-     */
-    public static String generateFileName(String barbershopName, String city, String category) {
-        return barbershopName + SECTION_DELIMITER + city + SECTION_DELIMITER + category + ".txt";
     }
 }
