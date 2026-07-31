@@ -16,8 +16,8 @@ Two modules that run independently:
   logic via Model Context Protocol (MCP).
   Tools: `bookAppointment`, `cancelAppointment`, `getClientAppointments`, `getBarberSchedule`.
   
-- MCPClient — Spring Boot REST API, handles user queries, 
-  retrieves context via RAG (SimpleVectorStore), calls OpenAI to generate responses.
+- MCPClient — Spring Boot REST API, handles user queries,
+  retrieves context via RAG (PGVector), filtered per-barbershop from metadata, calls OpenAI to generate responses.
 
 ## Tech Stack
 Java 21, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL, Gradle
@@ -49,7 +49,11 @@ or just straight
 ```bash
 curl -X POST http://localhost:8080/chat \
   -H "Content-Type: application/json" \
-  -d '{"question": "What haircut services do you offer?"}'
+  -d '{
+        "question": "Can you list staff that works in this barbershop?",
+        "barbershopName": "STARY_CYRULIK",
+        "city": "Gdansk"
+      }'
 ```
 
 ## Why RAG?

@@ -7,3 +7,5 @@ CREATE TABLE IF NOT EXISTS appointments (
     date_time    TIMESTAMP     NOT NULL,
     status       SMALLINT      NOT NULL DEFAULT 0
 );
+
+CREATE UNIQUE INDEX uq_barber_slot ON appointments (barber_name, date_time) WHERE status = 0;
