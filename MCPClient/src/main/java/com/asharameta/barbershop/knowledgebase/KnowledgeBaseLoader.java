@@ -1,5 +1,7 @@
 package com.asharameta.barbershop.knowledgebase;
 
+import org.apache.tika.sax.BodyContentHandler;
+import org.springframework.ai.reader.ExtractedTextFormatter;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.core.io.Resource;
@@ -13,7 +15,6 @@ import java.util.*;
 import static com.asharameta.barbershop.knowledgebase.BarbershopFileParser.parseFileName;
 import com.asharameta.barbershop.knowledgebase.BarbershopFileParser.BarbershopMetadata;
 import org.springframework.core.io.support.ResourcePatternResolver;
-
 
 
 public class KnowledgeBaseLoader {
@@ -48,7 +49,7 @@ public class KnowledgeBaseLoader {
                     .map(KnowledgeBaseData::filename).toList();
 
             if(!brokenFileNames.isEmpty()){
-                throw new IllegalStateException("there is files that are not matching the pattern: {barbershop}__{city}__{category}. \n: "+brokenFileNames);
+                throw new IllegalStateException("There is files that are not matching the pattern: {barbershop}__{city}__{category}. \n: "+brokenFileNames);
             }
 
             return classifieds.stream().flatMap(classified -> {

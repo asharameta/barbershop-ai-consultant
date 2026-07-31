@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: barbershop-postgres
     environment:
       POSTGRES_DB: Barbershop
@@ -12,7 +12,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d Barbershop" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d Barbershop" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,9 +42,13 @@ services:
       - "8080:8080"
     depends_on:
       - mcp-server
+      - postgres
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       SPRING_AI_MCP_CLIENT_SSE_CONNECTIONS_BARBER-MCP-SERVER_URL: http://mcp-server:8081
+      SPRING_DATASOURCE_URL: ${POSTGRES_URL}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1" ]
       interval: 15s

@@ -13,15 +13,15 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Locale;
 
@@ -31,14 +31,17 @@ public class BarberClientConfig {
     @Value("${spring.ai.openai.api-key}")
     String apiKey;
 
-    @Value("${asharameta.barbershop.name}")
-    String barbershopName;
-
-    @Value("${asharameta.barbershop.city}")
-    String barbershopCity;
-
     @Value("${asharameta.barbershop.knowledge-base.resource-pattern}")
     String resourcePattern;
+
+    @Value("${spring.datasource.url}")
+    private String url;
+
+    @Value("${spring.datasource.username}")
+    private String username;
+
+    @Value("${spring.datasource.password}")
+    private String password;
 
     @Bean
     OpenAiChatModel openAiChatModel(){
@@ -69,8 +72,13 @@ public class BarberClientConfig {
     }
 
     @Bean
-    public VectorStore vectorStore(OpenAiEmbeddingModel openAiEmbeddingModel){
-        return SimpleVectorStore.builder(openAiEmbeddingModel).build();
+    public VectorStore vectorStore(JdbcTemplate jdbcTemplate, OpenAiEmbeddingModel embeddingModel){
+        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
+                .initializeSchema(true)
+                .dimensions(1536) //code of text-embedding-3-small model
+                .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
+                .indexType(PgVectorStore.PgIndexType.HNSW)
+                .build();
     }
 
     @Bean
@@ -78,12 +86,7 @@ public class BarberClientConfig {
                                     ToolCallbackProvider tools,
                                     VectorStore vectorStore)
     {
-        FilterExpressionBuilder b = new FilterExpressionBuilder();
         var searchRequest = SearchRequest.builder()
-                .filterExpression(b.and(
-                        b.in("barbershop_name", barbershopName.toLowerCase(Locale.ROOT)),
-                        b.in("barbershop_city", barbershopCity.toLowerCase(Locale.ROOT))
-                ).build())
                 .topK(5)
                 .similarityThreshold(0.3)
                 .build();
@@ -100,11 +103,8 @@ public class BarberClientConfig {
     }
 
     private String buildSystemPrompt() {
-        return String.format("""
-        You are a helpful assistant for %s barbershop.
-        Location: %s
-        
-        Opening hours: Monday-Friday 8:00-21:00 | Saturday-Sunday 08:00-15:00
+        return """
+        You are a helpful assistant for barbershop.
 
         IMPORTANT INSTRUCTIONS:
         - Only answer what the user specifically asks about
@@ -116,14 +116,14 @@ public class BarberClientConfig {
         You have access to MCP tools and barbershop information. Use them wisely.
         
         If you don't have answer just say it, never send empty response back.
-        """, barbershopName, barbershopCity);
+        """;
     }
 
     @Bean
     public TextSplitter splitter(){
         return TokenTextSplitter.builder()
-                .withChunkSize(300)
-                .withMinChunkSizeChars(100)
+                .withChunkSize(1000)
+                .withMinChunkSizeChars(350)
                 .withMinChunkLengthToEmbed(50)
                 .withMaxNumChunks(10000)
                 .withKeepSeparator(true)

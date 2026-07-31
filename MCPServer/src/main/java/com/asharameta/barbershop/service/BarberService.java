@@ -55,7 +55,6 @@ public class BarberService {
     ) {
         List<Appointment> appointments = appointmentDAO.getClientAppointments(phoneNumber);
 
-
         if (appointments.isEmpty()) return "No appointments found for this client.";
         return appointments.stream()
                 .map(a -> String.format("[%d] %s with %s on %s",
