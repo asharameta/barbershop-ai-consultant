@@ -47,7 +47,7 @@ public class KnowledgeBaseLoader {
                     .map(KnowledgeBaseData::filename).toList();
 
             if(!brokenFileNames.isEmpty()){
-                throw new IllegalStateException("There is files that are not matching the pattern: {barbershop}__{city}__{category}. \n: "+brokenFileNames);
+                throw new IllegalStateException("There are files that do not match the pattern: {barbershop}__{city}__{category}. \n: "+brokenFileNames);
             }
 
             return classifieds.stream().flatMap(classified -> {

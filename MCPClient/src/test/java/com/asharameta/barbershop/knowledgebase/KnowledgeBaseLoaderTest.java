@@ -78,7 +78,7 @@ class KnowledgeBaseLoaderTest {
 
     @DisplayName("Test to check wrong filename")
     @Test
-    void TryToParseWrongFilenameTest() throws IOException {
+    void tryToParseWrongFilenameTest() throws IOException {
         String wrongFilename1 = "name_city___category.txt";
         String wrongFilename2 = "double_name__city__category.txt";
         when(resolver.getResources(resourcePattern)).thenReturn(new Resource[]{new FakeResource(wrongFilename1),new FakeResource(wrongFilename2), new FakeResource(null)});
@@ -98,11 +98,11 @@ class KnowledgeBaseLoaderTest {
         UncheckedIOException exception = assertThrows(UncheckedIOException.class,
                 () -> knowledgeBaseLoader.loadDocuments());
 
-        assertEquals(ioException, exception.getCause(), "prove that exception we get is the one from thenThrow");
+        assertEquals(ioException, exception.getCause(), "prove that the exception we get is the one from thenThrow");
         assertEquals(ioException.getMessage(), exception.getMessage());
     }
 
-    @DisplayName("Test no resources found throws IllegalStateException")
+    @DisplayName("Test that no resources found throws an IllegalStateException")
     @Test
     void testNoResourceFoundException() throws IOException {
         when(resolver.getResources(resourcePattern)).thenReturn(new Resource[0]);
