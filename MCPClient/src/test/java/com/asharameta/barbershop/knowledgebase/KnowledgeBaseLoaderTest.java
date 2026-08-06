@@ -86,7 +86,7 @@ class KnowledgeBaseLoaderTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> knowledgeBaseLoader.loadDocuments());
 
-        assertTrue(ex.getMessage().contains("There is files that are not matching the pattern: {barbershop}__{city}__{category}."));
+        assertTrue(ex.getMessage().contains("There are files that do not match the pattern: {barbershop}__{city}__{category}."));
     }
 
     @DisplayName("Test to check wrong resourcePattern")
