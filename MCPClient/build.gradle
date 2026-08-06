@@ -22,6 +22,10 @@ dependencyManagement {
     }
 }
 
+configurations{
+    mockitoAgent
+}
+
 dependencies {
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
     implementation 'org.springframework.ai:spring-ai-starter-mcp-client'
@@ -36,8 +40,16 @@ dependencies {
     implementation 'org.springframework.ai:spring-ai-pgvector-store'
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation 'org.postgresql:postgresql:42.7.8'
+
+    testImplementation 'org.mockito:mockito-core:5.23.0'
+    mockitoAgent('org.mockito:mockito-core:5.23.0') {
+        transitive = false
+    }
 }
+
+
 
 tasks.named('test') {
     useJUnitPlatform()
+    jvmArgs += "-javaagent:${configurations.mockitoAgent.asPath}"
 }

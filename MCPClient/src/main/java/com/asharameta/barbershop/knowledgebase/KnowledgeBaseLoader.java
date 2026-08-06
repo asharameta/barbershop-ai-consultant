@@ -1,7 +1,5 @@
 package com.asharameta.barbershop.knowledgebase;
 
-import org.apache.tika.sax.BodyContentHandler;
-import org.springframework.ai.reader.ExtractedTextFormatter;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.core.io.Resource;
@@ -75,7 +73,7 @@ public class KnowledgeBaseLoader {
 
     private void stamp(List<Document> documents, BarbershopMetadata metadata){
         documents.forEach(doc -> {
-            doc.getMetadata().put("barbershop_name", metadata.barbershopName().toLowerCase(Locale.ROOT));
+            doc.getMetadata().put("barbershop_name", metadata.name().toLowerCase(Locale.ROOT));
             doc.getMetadata().put("barbershop_city", metadata.city().toLowerCase(Locale.ROOT));
             doc.getMetadata().put("barbershop_category", metadata.category().toLowerCase(Locale.ROOT));
         });

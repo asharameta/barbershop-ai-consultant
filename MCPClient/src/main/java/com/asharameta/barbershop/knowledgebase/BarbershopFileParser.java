@@ -1,15 +1,20 @@
 package com.asharameta.barbershop.knowledgebase;
 
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+
 public class BarbershopFileParser {
-    private static final String SECTION_DELIMITER = "__";
+    private static final Pattern SECTIONS_PATTERN = Pattern.compile("^([^_]+)__([^_]+)__([^_]+)$");
 
     /**
      * Metadata extracted from barbershop file name
      */
-    public record BarbershopMetadata(String barbershopName, String city, String category, String fileName) {
+    public record BarbershopMetadata(String name, String city, String category, String fileName) {
 
         public String getDisplayName() {
-            return formatName(barbershopName);
+            return formatName(name);
         }
 
         public String getDisplayCity() {
@@ -50,35 +55,34 @@ public class BarbershopFileParser {
 
     /**
      * Extracts metadata from a barbershop file name
-     * Pattern: {barbershop_name}__{city}__{category}.txt
+     * First Possible Pattern: {name}__{city}__{category}.txt
+     * Second Possible Pattern: {barbershop-name}__{city-name}__{category}.txt
      *
-     * @param fileName the file name (e.g., "black_gold__houston__about.txt")
+     * @param fileName the file name (e.g., "black-gold__houston__about.txt", "sharp__new-york__staff.txt")
      * @return BarbershopMetadata or null if pattern doesn't match
      */
     public static BarbershopMetadata parseFileName(String fileName) {
-        // Remove .txt extension if present
-        String nameWithoutExt = fileName;
-        if (fileName.endsWith(".txt")) {
-            nameWithoutExt = fileName.substring(0, fileName.length() - 4);
-        }
-
-        // Split by double underscore
-        String[] sections = nameWithoutExt.split(SECTION_DELIMITER);
-
-        // Should have exactly 3 sections: barbershop, city, category
-        if (sections.length != 3) {
+        if (fileName == null) {
             return null;
         }
 
-        String barbershopName = sections[0];
-        String city = sections[1];
-        String category = sections[2];
+        Optional<FileExtension> extension = FileExtension.fromFileName(fileName);
+        if (extension.isEmpty()) {
+            return null; // rejects missing/wrong extension
+        }
 
-        // Validate that none of the sections are empty
-        if (barbershopName.isEmpty() || city.isEmpty() || category.isEmpty()) {
+        String nameWithoutExt = fileName.substring(0, fileName.length() - extension.get().getExtension().length());
+
+        // reject double extensions like "category.txt.txt"
+        if (FileExtension.fromFileName(nameWithoutExt).isPresent()) {
             return null;
         }
 
-        return new BarbershopMetadata(barbershopName, city, category, fileName);
+        Matcher matcher = SECTIONS_PATTERN.matcher(nameWithoutExt);
+        if (!matcher.matches()) {
+            return null; // rejects wrong delimiter count, extra underscores, single underscores
+        }
+
+        return new BarbershopMetadata(matcher.group(1), matcher.group(2), matcher.group(3), fileName);
     }
 }

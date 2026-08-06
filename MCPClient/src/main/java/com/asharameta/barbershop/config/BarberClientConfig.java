@@ -23,8 +23,6 @@ import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvi
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.util.Locale;
-
 
 @Configuration
 public class BarberClientConfig {
