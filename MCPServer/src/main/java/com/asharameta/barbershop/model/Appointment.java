@@ -1,10 +1,6 @@
 package com.asharameta.barbershop.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import  lombok.Builder;
-import lombok.NoArgsConstructor;
-
+import lombok.*;
 import java.time.LocalDateTime;
 
 @Data

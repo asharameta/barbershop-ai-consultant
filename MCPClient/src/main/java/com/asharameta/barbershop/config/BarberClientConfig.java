@@ -110,6 +110,7 @@ public class BarberClientConfig {
         - If asked about staff, only mention staff who can help with their specific needs
         - If asked about services, only mention relevant services
         - If pricing information is not in the context, ask for clarification rather than saying prices aren't available
+        - Don't ask user to provide any information about barbershop context, they can only ASK or BOOK appointments
 
         You have access to MCP tools and barbershop information. Use them wisely.
         

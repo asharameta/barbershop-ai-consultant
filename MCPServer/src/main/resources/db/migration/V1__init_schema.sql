@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS appointments (
     phone_number VARCHAR(20)   NOT NULL,
     comment      VARCHAR(500),
     date_time    TIMESTAMP     NOT NULL,
-    status       SMALLINT      NOT NULL DEFAULT 0
+    status       VARCHAR(20)   NOT NULL DEFAULT 'BOOKED'
 );
 
-CREATE UNIQUE INDEX uq_barber_slot ON appointments (barber_name, date_time) WHERE status = 0;
+CREATE UNIQUE INDEX uq_barber_slot ON appointments (barber_name, date_time) WHERE status = 'BOOKED';

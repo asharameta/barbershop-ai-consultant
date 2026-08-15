@@ -3,6 +3,7 @@ package com.asharameta.barbershop.dao;
 import com.asharameta.barbershop.model.Appointment;
 import com.asharameta.barbershop.model.BookStatus;
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -16,26 +17,29 @@ public class AppointmentDAO {
     private final JdbcTemplate jdbcTemplate;
 
     public Appointment bookAppointment(Appointment appointment){
-        String sql = """
+            String sql = """
             INSERT INTO appointments (barber_name, client_name, phone_number, comment, date_time, status)
             VALUES (?, ?, ?, ?, ?, ?)
             RETURNING *
             """;
-
-        return jdbcTemplate.queryForObject(sql,
-                rowMapper,
-                appointment.getBarberName(),
-                appointment.getClientName(),
-                appointment.getPhoneNumber(),
-                appointment.getComment(),
-                appointment.getDateTime(),
-                BookStatus.BOOKED.ordinal()
-        );
+        try{
+            return jdbcTemplate.queryForObject(sql,
+                    rowMapper,
+                    appointment.getBarberName(),
+                    appointment.getClientName(),
+                    appointment.getPhoneNumber(),
+                    appointment.getComment(),
+                    appointment.getDateTime(),
+                    BookStatus.BOOKED.name()
+            );
+        }catch (DuplicateKeyException e){
+            return Appointment.builder().status(BookStatus.UNAVAILABLE).build();
+        }
     }
 
-    public boolean cancelAppointment(int id){
-        String sql = "UPDATE appointments SET status = ? WHERE id = ? AND status = ?";
-        return jdbcTemplate.update(sql, BookStatus.CANCELLED.ordinal(), id, BookStatus.BOOKED.ordinal()) == 1;
+    public boolean cancelAppointment(String clientName, String phoneNumber){
+        String sql = "UPDATE appointments SET status = ? WHERE client_name = ? AND phone_number = ? AND status = ?";
+        return jdbcTemplate.update(sql, BookStatus.CANCELLED.name(), clientName, phoneNumber, BookStatus.BOOKED.name()) == 1;
     }
 
     public List<Appointment> getClientAppointments(String phoneNumber){
@@ -47,7 +51,7 @@ public class AppointmentDAO {
     public List<Appointment> getBarberSchedule(String barberName, String date){
         String sql = "SELECT * FROM appointments WHERE barber_name = ? AND DATE(date_time) = ? AND status = ? ORDER BY date_time";
         LocalDate localDate = LocalDate.parse(date);
-        return jdbcTemplate.query(sql, rowMapper, barberName, localDate, BookStatus.BOOKED.ordinal());
+        return jdbcTemplate.query(sql, rowMapper, barberName, localDate, BookStatus.BOOKED.name());
     }
 
     private final RowMapper<Appointment> rowMapper =
@@ -58,6 +62,6 @@ public class AppointmentDAO {
                     .phoneNumber(rs.getString("phone_number"))
                     .comment(rs.getString("comment"))
                     .dateTime(rs.getTimestamp("date_time").toLocalDateTime())
-                    .status(BookStatus.values()[rs.getInt("status")])
+                    .status(BookStatus.valueOf(rs.getString("status")))
                     .build();
 }
