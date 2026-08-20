@@ -19,6 +19,38 @@ Two modules that run independently:
 - MCPClient — Spring Boot REST API, handles user queries,
   retrieves context via RAG (PGVector), filtered per-barbershop from metadata, calls OpenAI to generate responses.
 
+```mermaid
+flowchart TD
+    User(["Client / curl"]) -->|"POST /chat"| Controller["BarberClientController"]
+
+    subgraph MCPClient["MCPClient (:8080)"]
+        Controller --> ChatClient["ChatClient\n(OpenAI gpt-5.4-nano)"]
+        ChatClient --> QAAdvisor["QuestionAnswerAdvisor\n(filter: barbershop_name + city)"]
+        ChatClient -->|tool calls| ToolProvider["ToolCallbackProvider\n(MCP client, SSE)"]
+
+        Loader["KnowledgeBaseLoader\n(startup, .txt docs)"] --> Splitter["TokenTextSplitter"]
+        Splitter --> Embed["OpenAiEmbeddingModel\n(text-embedding-3-small)"]
+    end
+
+    subgraph MCPServer["MCPServer (:8081)"]
+        ToolProvider -->|SSE| Tools["MCP Tools\nbookAppointment / cancelAppointment /\ngetClientAppointments / getBarberSchedule"]
+        Tools --> BarberService["BarberService"]
+        BarberService --> DAO["AppointmentDAO"]
+    end
+
+    subgraph DB["PostgreSQL + pgvector"]
+        Vectors[("PGVector store\nembedded knowledge base")]
+        Appointments[("appointments table\nFlyway-migrated")]
+    end
+
+    QAAdvisor <--> Vectors
+    Embed --> Vectors
+    DAO <--> Appointments
+
+    ChatClient -->|answer| Controller
+    Controller -->|Answer JSON| User
+```
+
 ## Tech Stack
 Java 21, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL, Gradle
 

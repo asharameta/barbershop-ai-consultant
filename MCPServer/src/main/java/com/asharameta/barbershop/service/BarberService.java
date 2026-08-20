@@ -5,7 +5,6 @@ import com.asharameta.barbershop.model.*;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
@@ -50,8 +49,44 @@ public class BarberService {
             if (bookedAppointment.getStatus() != BookStatus.BOOKED) {
                 return "Slot at " + dateTime + " with " + barberName + " is not available.";
             }
+
             return "Booked! ID: " + bookedAppointment.getId() + " — " + clientName + " with " + barberName + " at " + dateTime;
         } catch (DateTimeParseException e) {
+            return "Invalid date/time format: " + dateTime + ". Expected ISO format, e.g. 2025-04-01T14:00.";
+        } catch (ConstraintViolationException e) {
+            return "Invalid booking details: " + e.getMessage();
+        }
+    }
+
+    @Tool(description = "Reschedule existing appointment to other dateTime")
+    public String rescheduleAppointment(
+            @ToolParam(description = "client name") @NotBlank @Size(max = 100) String clientName,
+            @ToolParam(description = "client phone number") @NotBlank @Pattern(regexp = "^\\+?[0-9]{7,15}$") String phoneNumber,
+            @ToolParam(description = "date and time in ISO format e.g. 2025-04-01T14:00") @NotBlank String dateTime
+    ){
+        try{
+            LocalDateTime parsedDateTime = LocalDateTime.parse(dateTime);
+            if (parsedDateTime.isBefore(LocalDateTime.now())) {
+                return "Cannot reschedule an appointment in the past: " + dateTime;
+            }
+
+            Appointment appointment = Appointment.builder()
+                    .clientName(clientName)
+                    .phoneNumber(phoneNumber)
+                    .dateTime(parsedDateTime)
+                    .build();
+
+            Appointment rescheduleAppointment = appointmentDAO.rescheduleAppointment(clientName, phoneNumber, appointment);
+
+            if(rescheduleAppointment == null){
+                return "Appointment " + clientName + " not found or already cancelled.";
+            }
+
+            if (rescheduleAppointment.getStatus() != BookStatus.BOOKED) {
+                return "Slot at " + dateTime + " with " + rescheduleAppointment.getBarberName() + " is not available.";
+            }
+            return "Appointment rescheduled! Client " + clientName + " with " + rescheduleAppointment.getBarberName() + " at " + dateTime;
+        }catch (DateTimeParseException e) {
             return "Invalid date/time format: " + dateTime + ". Expected ISO format, e.g. 2025-04-01T14:00.";
         } catch (ConstraintViolationException e) {
             return "Invalid booking details: " + e.getMessage();
@@ -64,11 +99,12 @@ public class BarberService {
             @ToolParam(description = "client phone number") @NotBlank @Pattern(regexp = "^\\+?[0-9]{7,15}$") String phoneNumber
     ) {
         try{
-            boolean isCancelled = appointmentDAO.cancelAppointment(clientName, phoneNumber);
-            if (isCancelled) {
-                return "Appointment " + clientName + " cancelled successfully.";
+            Appointment cancelledAppointment = appointmentDAO.cancelAppointment(clientName, phoneNumber);
+            if (cancelledAppointment == null) {
+                return "Appointment " + clientName + " not found or already cancelled.";
             }
-            return "Appointment " + clientName + " not found or already cancelled.";
+
+            return "Appointment " + clientName + " cancelled successfully.";
         }catch (ConstraintViolationException e) {
             return "Invalid booking details: " + e.getMessage();
         }

@@ -4,9 +4,11 @@ import com.asharameta.barbershop.model.Appointment;
 import com.asharameta.barbershop.model.BookStatus;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -17,29 +19,55 @@ public class AppointmentDAO {
     private final JdbcTemplate jdbcTemplate;
 
     public Appointment bookAppointment(Appointment appointment){
-            String sql = """
-            INSERT INTO appointments (barber_name, client_name, phone_number, comment, date_time, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-            RETURNING *
-            """;
         try{
-            return jdbcTemplate.queryForObject(sql,
-                    rowMapper,
-                    appointment.getBarberName(),
-                    appointment.getClientName(),
-                    appointment.getPhoneNumber(),
-                    appointment.getComment(),
-                    appointment.getDateTime(),
-                    BookStatus.BOOKED.name()
-            );
+           return insertAppointment(appointment);
         }catch (DuplicateKeyException e){
             return Appointment.builder().status(BookStatus.UNAVAILABLE).build();
         }
     }
 
-    public boolean cancelAppointment(String clientName, String phoneNumber){
-        String sql = "UPDATE appointments SET status = ? WHERE client_name = ? AND phone_number = ? AND status = ?";
-        return jdbcTemplate.update(sql, BookStatus.CANCELLED.name(), clientName, phoneNumber, BookStatus.BOOKED.name()) == 1;
+    private Appointment insertAppointment(Appointment appointment){
+        String sql = """
+            INSERT INTO appointments (barber_name, client_name, phone_number, comment, date_time, status)
+            VALUES (?, ?, ?, ?, ?, ?)
+            RETURNING *
+            """;
+
+        return jdbcTemplate.queryForObject(sql,
+                rowMapper,
+                appointment.getBarberName(),
+                appointment.getClientName(),
+                appointment.getPhoneNumber(),
+                appointment.getComment(),
+                appointment.getDateTime(),
+                BookStatus.BOOKED.name()
+        );
+    }
+
+    @Transactional
+    public Appointment rescheduleAppointment(String clientName, String phoneNumber, Appointment newAppointment){
+        var cancelledAppointment = cancelAppointment(clientName, phoneNumber);
+        if(cancelledAppointment == null){
+            return null;
+        }
+        newAppointment.setBarberName(cancelledAppointment.getBarberName());
+        newAppointment.setComment(cancelledAppointment.getComment());
+        return bookAppointment(newAppointment);
+    }
+
+    public Appointment cancelAppointment(String clientName, String phoneNumber){
+        String sql = "UPDATE appointments SET status = ? WHERE client_name = ? AND phone_number = ? AND status = ? RETURNING *";
+        try{
+            return jdbcTemplate.queryForObject(sql,
+                    rowMapper,
+                    BookStatus.CANCELLED.name(),
+                    clientName,
+                    phoneNumber,
+                    BookStatus.BOOKED.name());
+        }catch(EmptyResultDataAccessException ex){
+            return null;
+        }
+
     }
 
     public List<Appointment> getClientAppointments(String phoneNumber){

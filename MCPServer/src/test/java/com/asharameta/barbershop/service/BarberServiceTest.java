@@ -86,7 +86,7 @@ class BarberServiceTest {
     void testCorrectlyCanceledAppointment() {
         String clientName = "Alex";
         String phoneNumber = "+48 123 456 789";
-        when(appointmentDAO.cancelAppointment(clientName,phoneNumber)).thenReturn(true);
+        when(appointmentDAO.cancelAppointment(clientName,phoneNumber)).thenReturn(Appointment.builder().clientName(clientName).phoneNumber(phoneNumber).build());
         String actualReturnString = barberService.cancelAppointment(clientName, phoneNumber);
 
         assertEquals( "Appointment " + clientName + " cancelled successfully.", actualReturnString);
@@ -97,7 +97,7 @@ class BarberServiceTest {
     void testIncorrectlyCanceledAppointment() {
         String clientName = "John";
         String phoneNumber = "-48 123 456 789";
-        when(appointmentDAO.cancelAppointment(clientName,phoneNumber)).thenReturn(false);
+        when(appointmentDAO.cancelAppointment(clientName,phoneNumber)).thenReturn(null);
         String actualReturnString = barberService.cancelAppointment(clientName, phoneNumber);
 
         assertEquals( "Appointment " + clientName + " not found or already cancelled.", actualReturnString);

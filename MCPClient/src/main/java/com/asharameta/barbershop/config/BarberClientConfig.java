@@ -4,6 +4,9 @@ import com.asharameta.barbershop.knowledgebase.KnowledgeBaseLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -65,6 +68,13 @@ public class BarberClientConfig {
     }
 
     @Bean
+    ChatMemory chatMemory(){
+        return MessageWindowChatMemory.builder()
+                .maxMessages(20)
+                .build();
+    }
+
+    @Bean
     public ObjectMapper objectMapper(){
         return new ObjectMapper();
     }
@@ -82,7 +92,8 @@ public class BarberClientConfig {
     @Bean
     public ChatClient chatClient(OpenAiChatModel openAiChatModel,
                                     ToolCallbackProvider tools,
-                                    VectorStore vectorStore)
+                                    VectorStore vectorStore,
+                                    ChatMemory chatMemory)
     {
         var searchRequest = SearchRequest.builder()
                 .topK(5)
@@ -93,9 +104,11 @@ public class BarberClientConfig {
                 .searchRequest(searchRequest)
                 .build();
 
+        var cmAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
+
         return ChatClient.builder(openAiChatModel)
                 .defaultSystem(buildSystemPrompt())
-                .defaultAdvisors(qaAdvisor)
+                .defaultAdvisors(qaAdvisor, cmAdvisor)
                 .defaultTools(tools)
                 .build();
     }
