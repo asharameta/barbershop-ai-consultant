@@ -1,18 +1,19 @@
 package com.asharameta.barbershop.knowledgebase;
 
+import com.asharameta.barbershop.knowledgebase.BarbershopFileParser.BarbershopMetadata;
+import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.core.io.Resource;
-
-import org.springframework.ai.document.Document;
+import org.springframework.core.io.support.ResourcePatternResolver;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 
 import static com.asharameta.barbershop.knowledgebase.BarbershopFileParser.parseFileName;
-import com.asharameta.barbershop.knowledgebase.BarbershopFileParser.BarbershopMetadata;
-import org.springframework.core.io.support.ResourcePatternResolver;
 
 
 public class KnowledgeBaseLoader {

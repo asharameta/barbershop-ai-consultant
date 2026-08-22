@@ -2,9 +2,9 @@ package com.asharameta.barbershop.config;
 
 import com.asharameta.barbershop.knowledgebase.KnowledgeBaseLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.document.MetadataMode;
@@ -22,7 +22,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -68,8 +67,9 @@ public class BarberClientConfig {
     }
 
     @Bean
-    ChatMemory chatMemory(){
+    ChatMemory chatMemory(BoundedChatMemory chatMemory){
         return MessageWindowChatMemory.builder()
+                .chatMemoryRepository(chatMemory)
                 .maxMessages(20)
                 .build();
     }

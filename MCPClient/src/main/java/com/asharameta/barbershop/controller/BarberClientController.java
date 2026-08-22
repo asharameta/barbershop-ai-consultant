@@ -1,6 +1,7 @@
 package com.asharameta.barbershop.controller;
 
-import com.asharameta.barbershop.model.*;
+import com.asharameta.barbershop.model.Answer;
+import com.asharameta.barbershop.model.Question;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
