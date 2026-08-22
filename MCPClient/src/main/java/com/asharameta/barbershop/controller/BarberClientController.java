@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.ai.vectorstore.filter.converter.PrintFilterExpressionConverter;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,10 +26,12 @@ public class BarberClientController {
 
     @PostMapping("/chat")
     public Answer chat(@Valid @RequestBody Question question) {
-        String filter = "barbershop_name == '%s' AND barbershop_city == '%s'".formatted(
-                question.barbershopName().toLowerCase(Locale.ROOT),
-                question.barbershopCity().toLowerCase(Locale.ROOT)
-        );
+        var b = new FilterExpressionBuilder();
+
+        var bName = b.eq("barbershop_name", question.barbershopName().toLowerCase(Locale.ROOT));
+        var bCity = b.eq("barbershop_city", question.barbershopCity().toLowerCase(Locale.ROOT));
+
+        var filter = new PrintFilterExpressionConverter().convertExpression(b.and(bName, bCity).build());
 
         String response = chatClientMCP.prompt()
                 .user(question.question())

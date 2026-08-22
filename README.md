@@ -33,7 +33,7 @@ flowchart TD
     end
 
     subgraph MCPServer["MCPServer (:8081)"]
-        ToolProvider -->|SSE| Tools["MCP Tools\nbookAppointment / cancelAppointment /\ngetClientAppointments / getBarberSchedule"]
+        ToolProvider -->|SSE| Tools["MCP Tools\nbookAppointment / cancelAppointment / rescheduleAppointment /\ngetClientAppointments / getBarberSchedule"]
         Tools --> BarberService["BarberService"]
         BarberService --> DAO["AppointmentDAO"]
     end

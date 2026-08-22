@@ -41,6 +41,7 @@ dependencies {
     implementation 'org.springframework.ai:spring-ai-pgvector-store'
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation 'org.postgresql:postgresql:42.7.8'
+    implementation 'com.bucket4j:bucket4j_jdk17-core:8.19.0'
 
     testImplementation 'org.mockito:mockito-core:5.23.0'
     mockitoAgent('org.mockito:mockito-core:5.23.0') {
@@ -48,7 +49,9 @@ dependencies {
     }
 }
 
-
+tasks.named('jar'){
+    enabled = false
+}
 
 tasks.named('test') {
     useJUnitPlatform()

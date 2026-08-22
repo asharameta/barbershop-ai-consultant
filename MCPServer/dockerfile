@@ -1,5 +1,4 @@
-ARG MODULE
 FROM eclipse-temurin:21-jdk
 WORKDIR /mcpServer
-COPY ${MODULE}/build/libs/*.jar mcpServer.jar
+COPY build/libs/*.jar mcpServer.jar
 ENTRYPOINT ["java", "-jar", "mcpServer.jar"]
