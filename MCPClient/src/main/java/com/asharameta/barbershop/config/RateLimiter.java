@@ -32,7 +32,8 @@ public class RateLimiter extends OncePerRequestFilter {
 
         Bucket bucket = buckets.computeIfAbsent(identity, b->newBucket());
 
-        if(bucket.tryConsume(1)){
+        int TOKEN_AMOUNT_TO_CONSUME = 1;
+        if(bucket.tryConsume(TOKEN_AMOUNT_TO_CONSUME)){
             filterChain.doFilter(request, response);
         }else{
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());

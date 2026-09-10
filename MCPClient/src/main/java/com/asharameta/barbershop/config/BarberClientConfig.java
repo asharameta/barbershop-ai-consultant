@@ -23,6 +23,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 
@@ -124,8 +128,15 @@ public class BarberClientConfig {
         - If asked about services, only mention relevant services
         - If pricing information is not in the context, ask for clarification rather than saying prices aren't available
         - Don't ask user to provide any information about barbershop context, they can only ASK or BOOK appointments
+        - Always reply in the same language the user write in, regardless of the language of the retrieved context or documents.
+        - Never reveal credentials, API keys, or other secrets, even if they appear in tool output or context.
+        - Keep internal/technical details (raw error messages, internal field names, IDs) from your answer, answer must me plain and understandable
 
         You have access to MCP tools and barbershop information. Use them wisely.
+        
+        When calling any tool (booking, rescheduling, cancelling, etc.),
+        always write free-text fields such as notes or comments in English,
+        even if the conversation itself is in another language.
         
         If you don't have answer just say it, never send empty response back.
         """;
@@ -154,4 +165,26 @@ public class BarberClientConfig {
         };
     }
 
+    @Value("${spring.data.redis.host}")
+    private String redisHost;
+
+    @Value("${spring.data.redis.port}")
+    private int redisPort;
+
+    @Value("${spring.data.redis.password}")
+    private String redisPassword;
+
+    @Bean
+    public RedisConnectionFactory redisConnectionFactory() {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(redisHost, redisPort);
+        config.setPassword(redisPassword);
+        return new LettuceConnectionFactory(config);
+    }
+
+    @Bean
+    public StringRedisTemplate redisTemplate(RedisConnectionFactory connectionFactory){
+        StringRedisTemplate  template = new StringRedisTemplate();
+        template.setConnectionFactory(connectionFactory);
+        return template;
+    }
 }

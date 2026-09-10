@@ -1,4 +1,6 @@
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:21-jre
+RUN groupadd -r mcpclient && useradd -r -g mcpclient mcpclient
 WORKDIR /mcpClient
-COPY build/libs/*.jar mcpClient.jar
+COPY --chown=mcpclient:mcpclient build/libs/*.jar mcpClient.jar
+USER mcpclient
 ENTRYPOINT ["java", "-jar", "mcpClient.jar"]

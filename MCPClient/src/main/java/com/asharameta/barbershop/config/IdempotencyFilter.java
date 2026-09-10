@@ -12,24 +12,18 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Order(2)
+@Order(3)
 @Component
-public class ApiKeyFilter extends OncePerRequestFilter {
-    @Value("${barbershop.api-key}")
-    private String expectedApiKey;
+public class IdempotencyFilter extends OncePerRequestFilter {
+    @Value("${idempotency.max-body-bytes}")
+    private long maxBodyBytes;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String headerValue = request.getHeader("B-API-Key");
-
-        if(headerValue != null){
-            if(expectedApiKey.equals(headerValue)){
-                filterChain.doFilter(request, response);
-            }else{
-                response.setStatus(HttpStatus.FORBIDDEN.value());
-            }
+        if(request.getContentLengthLong() > maxBodyBytes){
+            response.setStatus(HttpStatus.CONTENT_TOO_LARGE.value());
         }else{
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            filterChain.doFilter(request, response);
         }
     }
 }

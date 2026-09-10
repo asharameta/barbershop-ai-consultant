@@ -14,6 +14,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,10 +38,10 @@ class BarberServiceTest {
 
     @Test
     void testBookAppointmentSuccess() {
-        String dateTimeString = "2026-09-09T08:30";
+        String dateTimeString = LocalDateTime.now().plusDays(1).truncatedTo(ChronoUnit.MINUTES).toString();
         LocalDateTime localDateTime = LocalDateTime.parse(dateTimeString);
         Appointment appointment = Appointment.builder()
-                .id(13)
+                .id(1)
                 .barberName("Maciej")
                 .clientName("Igor")
                 .phoneNumber("+48 321 654 987")
@@ -64,15 +65,6 @@ class BarberServiceTest {
 
     @Test
     void testProvidedPastDateForBookAppointment() {
-        String dateTimeString = "2026-05-15T12:25";
-        LocalDateTime localDateTime = LocalDateTime.parse(dateTimeString);
-
-        String providedPastDateTime = barberService.bookAppointment("Kamil", "Jan", "+48 123 456 789", "", dateTimeString);
-        assertEquals("Cannot book an appointment in the past: " + localDateTime, providedPastDateTime);
-    }
-
-    @Test
-    void testBookIsFailedForBookAppointment() {
         String dateTimeString = "2026-05-15T12:25";
         LocalDateTime localDateTime = LocalDateTime.parse(dateTimeString);
 
