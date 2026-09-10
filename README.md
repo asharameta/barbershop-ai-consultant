@@ -19,24 +19,17 @@ Two modules that run independently:
   retrieves context via RAG (PGVector), filtered per-barbershop from metadata, calls OpenAI to generate responses.
   Requests are rate-limited per client IP and require an API key (`B-API-Key` header). Chat history is kept
   per `conversationId` in a bounded in-memory cache (Caffeine, evicted after 1h / max conversations).
+  
 
 ## Tech Stack
 
-Java 21, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL, Bucket4j, Caffeine, Gradle
+Java 21, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL, Bucket4j, Caffeine, Redis, Gradle
 
 ## How to Run
 
 **0. Create `.env` file in project root**
 
-```env
-OPENAI_API_KEY=your-key-here
-POSTGRES_URL=your-url-here
-POSTGRES_USERNAME=your-username-here
-POSTGRES_PASSWORD=your-password-here
-BARBERSHOP_API_KEY=your-api-key-here
-```
-
-You can also find `.env.example` file in project root
+Copy `.env.example` to `.env` and fill with your own data.
 
 **1. Build and start**
 
@@ -52,15 +45,16 @@ or just straight
 
 **2. Send a query**
 
-Every request needs a `B-API-Key` header (matching `BARBERSHOP_API_KEY`) and a `conversationId`
-(a UUID, used to keep chat history scoped per conversation).
+Every request needs a `B-API-Key` header (matching `BARBERSHOP_API_KEY`), a `conversationId`
+(a UUID, used to keep chat history scoped per conversation), and an `Idempotency-Key` header.
 
 ```bash
-curl -X POST http://localhost:8080/chat \
-  -H "Content-Type: application/json" \
-  -H "B-API-Key: your-api-key-here" \
+curl -X POST http://localhost:8080/api/v1/barbershops/chat \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: idempotency-key-here' \
+  -H 'B-API-Key: your-api-key-here' \
   -d '{
-        "conversationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "conversationId": "conversation-id-here",
         "question": "Can you list staff that works in this barbershop?",
         "barbershopName": "STARY_CYRULIK",
         "barbershopCity": "Gdansk"
