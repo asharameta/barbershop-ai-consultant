@@ -19,7 +19,7 @@ import java.util.Locale;
 
 @Validated
 @RestController
-@RequestMapping("/api/v1/barbershops/")
+@RequestMapping("/api/v1/")
 public class BarberClientController {
     private final IdempotencyService idempotencyService;
     private final AiChatService chatService;

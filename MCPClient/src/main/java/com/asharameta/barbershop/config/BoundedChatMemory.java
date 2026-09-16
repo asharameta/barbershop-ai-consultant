@@ -13,10 +13,13 @@ import java.util.List;
 
 @Component
 public class BoundedChatMemory implements ChatMemoryRepository {
-    @Value("${chatmemory.max-conversations}")
-    private int maxConversations;
+    private Cache<String, List<Message>> cache;
+    private final int maxConversations;
 
-    Cache<String, List<Message>> cache;
+    public BoundedChatMemory(@Value("${chatmemory.max-conversations}") int maxConversations){
+        this.maxConversations = maxConversations;
+    }
+
     @PostConstruct
     public void init(){
         cache = Caffeine.newBuilder()

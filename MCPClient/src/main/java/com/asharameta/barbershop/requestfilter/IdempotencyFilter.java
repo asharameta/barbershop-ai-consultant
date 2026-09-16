@@ -1,4 +1,4 @@
-package com.asharameta.barbershop.config;
+package com.asharameta.barbershop.requestfilter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,11 +15,19 @@ import java.io.IOException;
 @Order(3)
 @Component
 public class IdempotencyFilter extends OncePerRequestFilter {
-    @Value("${idempotency.max-body-bytes}")
-    private long maxBodyBytes;
+    private final long maxBodyBytes;
+
+    public IdempotencyFilter(@Value("${idempotency.max-body-bytes}") long maxBodyBytes){
+        this.maxBodyBytes = maxBodyBytes;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         if(request.getContentLengthLong() > maxBodyBytes){
             response.setStatus(HttpStatus.CONTENT_TOO_LARGE.value());
         }else{
