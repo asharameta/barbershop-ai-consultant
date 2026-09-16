@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,6 +23,7 @@ public class AppointmentDAO {
         try{
            return insertAppointment(appointment);
         }catch (DuplicateKeyException e){
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return Appointment.builder().status(BookStatus.UNAVAILABLE).build();
         }
     }
@@ -65,6 +67,7 @@ public class AppointmentDAO {
                     phoneNumber,
                     BookStatus.BOOKED.name());
         }catch(EmptyResultDataAccessException ex){
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return null;
         }
 

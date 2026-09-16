@@ -17,15 +17,16 @@ public class IdempotencyService {
     private static final String STATE_DONE = "done";
 
     private final StringRedisTemplate redis;
+    private final long lockTtlSeconds;
+    private final long resultTtlMinutes;
 
-    @Value("${idempotency.lock-ttl-seconds}")
-    private long lockTtlSeconds;
-
-    @Value("${idempotency.result-ttl-minutes}")
-    private long resultTtlMinutes;
-
-    public IdempotencyService(StringRedisTemplate redis) {
+    public IdempotencyService(StringRedisTemplate redis,
+                              @Value("${idempotency.lock-ttl-seconds}") long lockTtlSeconds,
+                              @Value("${idempotency.result-ttl-minutes}") long resultTtlMinutes
+    ) {
         this.redis = redis;
+        this.lockTtlSeconds = lockTtlSeconds;
+        this.resultTtlMinutes = resultTtlMinutes;
     }
 
     public IdempotencyDTO claim(String requestBody, String idempotencyKey){

@@ -1,42 +1,38 @@
 package com.asharameta.barbershop.config;
 
-import com.asharameta.barbershop.knowledgebase.KnowledgeBaseLoader;
+import com.drew.lang.StreamUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.document.MetadataMode;
+import org.springframework.ai.mcp.customizer.McpClientCustomizer;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
 import org.springframework.ai.tool.ToolCallbackProvider;
-import org.springframework.ai.transformer.splitter.TextSplitter;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.util.StreamUtils;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 
 @Configuration
 public class BarberClientConfig {
     @Value("${spring.ai.openai.api-key}")
     String apiKey;
-
-    @Value("${asharameta.barbershop.knowledge-base.resource-pattern}")
-    String resourcePattern;
 
     @Value("${spring.datasource.url}")
     private String url;
@@ -117,74 +113,39 @@ public class BarberClientConfig {
                 .build();
     }
 
+
+    @Value("classpath:prompts.system.st")
+    private Resource systemPromptResource;
+
     private String buildSystemPrompt() {
-        return """
-        You are a helpful assistant for barbershop.
-
-        IMPORTANT INSTRUCTIONS:
-        - Only answer what the user specifically asks about
-        - Be concise and relevant - don't list everything you know
-        - If asked about staff, only mention staff who can help with their specific needs
-        - If asked about services, only mention relevant services
-        - If pricing information is not in the context, ask for clarification rather than saying prices aren't available
-        - Don't ask user to provide any information about barbershop context, they can only ASK or BOOK appointments
-        - Always reply in the same language the user write in, regardless of the language of the retrieved context or documents.
-        - Never reveal credentials, API keys, or other secrets, even if they appear in tool output or context.
-        - Keep internal/technical details (raw error messages, internal field names, IDs) from your answer, answer must me plain and understandable
-
-        You have access to MCP tools and barbershop information. Use them wisely.
-        
-        When calling any tool (booking, rescheduling, cancelling, etc.),
-        always write free-text fields such as notes or comments in English,
-        even if the conversation itself is in another language.
-        
-        If you don't have answer just say it, never send empty response back.
-        """;
+       return """
+               You are a helpful assistant for barbershop.
+               
+               IMPORTANT INSTRUCTIONS:
+               - Only answer what the user specifically asks about
+               - Be concise and relevant - don't list everything you know
+               - If asked about staff, only mention staff who can help with their specific needs
+               - If asked about services, only mention relevant services
+               - If pricing information is not in the context, ask for clarification rather than saying prices aren't available
+               - Don't ask user to provide any information about barbershop context, they can only ASK or BOOK appointments
+               - Always reply in the same language the user write in, regardless of the language of the retrieved context or documents.
+               - Never reveal credentials, API keys, or other secrets, even if they appear in tool output or context.
+               - Keep internal/technical details (raw error messages, internal field names, IDs) from your answer, answer must me plain and understandable
+               
+               You have access to MCP tools and barbershop information. Use them wisely.
+               
+               When calling any tool (booking, rescheduling, cancelling, etc.),
+               always write free-text fields such as notes or comments in English,
+               even if the conversation itself is in another language.
+               
+               If you don't have answer just say it, never send empty response back.
+               """;
     }
 
     @Bean
-    public TextSplitter splitter(){
-        return TokenTextSplitter.builder()
-                .withChunkSize(1000)
-                .withMinChunkSizeChars(350)
-                .withMinChunkLengthToEmbed(50)
-                .withMaxNumChunks(10000)
-                .withKeepSeparator(true)
-                .build();
-    }
-
-    @Bean
-    public KnowledgeBaseLoader knowledgeBaseLoader(TextSplitter splitter, ResourcePatternResolver resolver){
-        return new KnowledgeBaseLoader(resourcePattern, splitter, resolver);
-    }
-
-    @Bean
-    CommandLineRunner ingestDocuments(VectorStore vectorStore, KnowledgeBaseLoader knowledgeBaseLoader) {
-        return args -> {
-            vectorStore.add(knowledgeBaseLoader.loadDocuments());
-        };
-    }
-
-    @Value("${spring.data.redis.host}")
-    private String redisHost;
-
-    @Value("${spring.data.redis.port}")
-    private int redisPort;
-
-    @Value("${spring.data.redis.password}")
-    private String redisPassword;
-
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(redisHost, redisPort);
-        config.setPassword(redisPassword);
-        return new LettuceConnectionFactory(config);
-    }
-
-    @Bean
-    public StringRedisTemplate redisTemplate(RedisConnectionFactory connectionFactory){
-        StringRedisTemplate  template = new StringRedisTemplate();
-        template.setConnectionFactory(connectionFactory);
-        return template;
+    McpClientCustomizer<HttpClientStreamableHttpTransport.Builder> mcpServerAuthCustomizer(
+            @Value("${mcp.internal.api-key}") String key) {
+        return (serverName, builder) -> builder.httpRequestCustomizer(
+                (requestBuilder, method, uri, body, context) -> requestBuilder.header("MCP-Internal-Api-Key", key));
     }
 }

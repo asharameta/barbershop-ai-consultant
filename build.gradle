@@ -5,17 +5,3 @@ plugins {
 group = 'com.testing'
 version = '1.0-SNAPSHOT'
 description = 'Demo project for learning about mcp, rag, vectors'
-
-subprojects {
-    apply plugin: 'java'
-
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
-        }
-    }
-
-    repositories {
-        mavenCentral()
-    }
-}
