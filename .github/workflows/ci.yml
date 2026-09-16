@@ -1,13 +1,11 @@
 name: CI
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,9 +14,25 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Test
+        run: ./gradlew test
+
       - name: Build
-        run: ./gradlew build
+        run: ./gradlew build -x test
+
+      - name: Validate MCPClient image builds
+        uses: docker/build-push-action@v6
+        with:
+          context: ./MCPClient
+          push: false
+
+      - name: Validate MCPServer image builds
+        uses: docker/build-push-action@v6
+        with:
+          context: ./MCPServer
+          push: false
