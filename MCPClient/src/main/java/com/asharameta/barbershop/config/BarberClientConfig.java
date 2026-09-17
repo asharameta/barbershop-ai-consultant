@@ -1,6 +1,5 @@
 package com.asharameta.barbershop.config;
 
-import com.drew.lang.StreamUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import org.springframework.ai.chat.client.ChatClient;
@@ -8,12 +7,9 @@ import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
-import org.springframework.ai.document.MetadataMode;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.mcp.customizer.McpClientCustomizer;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.OpenAiEmbeddingModel;
-import org.springframework.ai.openai.OpenAiEmbeddingOptions;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -23,17 +19,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.util.StreamUtils;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
 
 @Configuration
 public class BarberClientConfig {
-    @Value("${spring.ai.openai.api-key}")
-    String apiKey;
-
     @Value("${spring.datasource.url}")
     private String url;
 
@@ -43,28 +31,8 @@ public class BarberClientConfig {
     @Value("${spring.datasource.password}")
     private String password;
 
-    @Bean
-    OpenAiChatModel openAiChatModel(){
-        return OpenAiChatModel.builder()
-                .options(OpenAiChatOptions.builder()
-                        .apiKey(apiKey)
-                        .model("gpt-5.4-nano")
-                        .temperature(0.4)
-                        .build())
-                .build();
-    }
-
-    @Bean
-    OpenAiEmbeddingModel openAiEmbeddingModel(){
-        return OpenAiEmbeddingModel.builder()
-                .metadataMode(MetadataMode.EMBED)
-                .options(OpenAiEmbeddingOptions.builder()
-                        .apiKey(apiKey)
-                        .model("text-embedding-3-small")
-                        .build())
-                .build();
-
-    }
+    @Value("${ai.embedding.dimensions}")
+    private int dimensions;
 
     @Bean
     ChatMemory chatMemory(BoundedChatMemory chatMemory){
@@ -80,20 +48,20 @@ public class BarberClientConfig {
     }
 
     @Bean
-    public VectorStore vectorStore(JdbcTemplate jdbcTemplate, OpenAiEmbeddingModel embeddingModel){
+    public VectorStore vectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel){
         return PgVectorStore.builder(jdbcTemplate, embeddingModel)
                 .initializeSchema(true)
-                .dimensions(1536) //code of text-embedding-3-small model
+                .dimensions(dimensions)
                 .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
                 .indexType(PgVectorStore.PgIndexType.HNSW)
                 .build();
     }
 
     @Bean
-    public ChatClient chatClient(OpenAiChatModel openAiChatModel,
-                                    ToolCallbackProvider tools,
-                                    VectorStore vectorStore,
-                                    ChatMemory chatMemory)
+    public ChatClient chatClient(ChatModel chatModel,
+                                 ToolCallbackProvider tools,
+                                 VectorStore vectorStore,
+                                 ChatMemory chatMemory)
     {
         var searchRequest = SearchRequest.builder()
                 .topK(5)
@@ -106,16 +74,12 @@ public class BarberClientConfig {
 
         var cmAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
 
-        return ChatClient.builder(openAiChatModel)
+        return ChatClient.builder(chatModel)
                 .defaultSystem(buildSystemPrompt())
                 .defaultAdvisors(qaAdvisor, cmAdvisor)
                 .defaultTools(tools)
                 .build();
     }
-
-
-    @Value("classpath:prompts.system.st")
-    private Resource systemPromptResource;
 
     private String buildSystemPrompt() {
        return """
