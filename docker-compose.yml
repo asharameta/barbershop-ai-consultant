@@ -54,7 +54,7 @@ services:
     image: ghcr.io/asharameta/barbershop-mcp-client:latest
     container_name: barbershop-mcp-client
     ports:
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
     depends_on:
       mcp-server:
         condition: service_healthy
