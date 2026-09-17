@@ -14,10 +14,9 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OpenAiProviderConfig {
-
     @Bean
     @ConditionalOnProperty(prefix = "ai.chat", name = "provider", havingValue = "openai", matchIfMissing = false)
-    ChatModel openAiChatModel(
+    OpenAiChatModel openAiChatModel(
             @Value("${spring.ai.openai.api-key}") String apiKey,
             @Value("${ai.chat.model}") String model,
             @Value("${ai.chat.temperature}") double temperature
@@ -33,7 +32,7 @@ public class OpenAiProviderConfig {
 
     @Bean
     @ConditionalOnProperty(prefix = "ai.embedding", name = "provider", havingValue = "openai", matchIfMissing = false)
-    EmbeddingModel openAiEmbeddingModel(
+    OpenAiEmbeddingModel openAiEmbeddingModel(
             @Value("${spring.ai.openai.api-key}") String apiKey,
             @Value("${ai.embedding.model}") String model
     ){
