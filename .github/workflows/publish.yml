@@ -30,20 +30,11 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: ./MCPClient
+          context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/barbershop-mcp-client:latest
-            ghcr.io/${{ github.repository_owner }}/barbershop-mcp-client:${{ github.sha }}
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: ./MCPServer
-
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/barbershop-mcp-server:latest
-            ghcr.io/${{ github.repository_owner }}/barbershop-mcp-server:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/barbershop-ai-consultant:latest
+            ghcr.io/${{ github.repository_owner }}/barbershop-ai-consultant:${{ github.sha }}
 
   deploy:
     needs: build-and-push

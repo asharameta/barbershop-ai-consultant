@@ -1,7 +1,0 @@
-FROM eclipse-temurin:21-jre
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-RUN groupadd -r mcpserver && useradd -r -g mcpserver mcpserver
-WORKDIR /mcpServer
-COPY --chown=mcpserver:mcpserver build/libs/*.jar mcpServer.jar
-USER mcpserver
-ENTRYPOINT ["java", "-jar", "mcpServer.jar"]

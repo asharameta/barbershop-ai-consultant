@@ -49,3 +49,6 @@ pgvector-data/
 
 # Docker
 docker-compose.override.yml
+
+# Claude
+.claude/
