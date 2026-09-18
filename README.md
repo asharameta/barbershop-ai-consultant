@@ -1,26 +1,27 @@
 ![CI](https://github.com/asharameta/barbershop-ai-consultant/actions/workflows/ci.yml/badge.svg)
 
-# Barbershop AI Consultant
+# Java Spring AI Booking Assistant
 
-An AI-powered REST API chatbot for a barbershop that answers questions
-about services, pricing, and availability by pulling responses from a
-real knowledge base (txt files) instead of making things up.
-Also handles appointment booking stored in PostgreSQL.
+A Java 21 and Spring Boot backend combining RAG, MCP and automated appointment booking for barbershops.
+
+The system combines:
+- Spring Boot REST API
+- Spring AI and RAG with PostgreSQL/pgvector
+- Model Context Protocol (MCP)
+- Redis and Caffeine caching
+- API key authentication and rate limiting
+- Idempotent request handling
+- Docker-based deployment
 
 ## Architecture
 
 Two modules that run independently:
 
-- MCPServer — exposes the barbershop knowledge base and booking
-  logic via Model Context Protocol (MCP).
-  Tools: `bookAppointment`, `rescheduleAppointment`, `cancelAppointment`, `getClientAppointments`, `getBarberSchedule`.
-
-- MCPClient — Spring Boot REST API, handles user queries,
-  retrieves context via RAG (PGVector), filtered per-barbershop from metadata, calls OpenAI to generate responses.
-  Requests are rate-limited per client IP and require an API key (`B-API-Key` header). Chat history is kept
-  per `conversationId` in a bounded in-memory cache (Caffeine, evicted after 1h / max conversations).
+- MCP Client — Spring Boot REST API responsible for request handling,
+  RAG orchestration and AI responses.
   
-
+- MCP Server — exposes booking operations through MCP.
+  
 ## Tech Stack
 
 Java 21, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL, Bucket4j, Caffeine, Redis, Gradle
