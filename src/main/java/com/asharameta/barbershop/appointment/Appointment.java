@@ -1,0 +1,19 @@
+package com.asharameta.barbershop.appointment;
+
+import lombok.*;
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class Appointment {
+    private int id;
+    private String barberName;
+    private String barbershop;
+    private String clientName;
+    private String phoneNumber;
+    private String comment;
+    private LocalDateTime dateTime;
+    private BookStatus status;
+}

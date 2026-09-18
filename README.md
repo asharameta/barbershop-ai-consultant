@@ -15,16 +15,21 @@ The system combines:
 
 ## Architecture
 
-Two modules that run independently:
+A single modulith(modular monolith) Spring Boot application:
 
-- MCP Client — Spring Boot REST API responsible for request handling,
-  RAG orchestration and AI responses.
-  
-- MCP Server — exposes booking operations through MCP.
+- `chat` — REST endpoint `POST /api/v1/chat`, `ChatClient` wiring (RAG advisor + bounded chat memory + tools),
+  chat history per `conversationId` in a bounded in-memory cache (Caffeine, evicted after 1h / max conversations).
+- `knowledgebase` — loads the txt knowledge base into PGVector on startup
+- `appointment` — booking logic in PostgreSQL (Flyway migrations).
+- `ai` — chat / embedding provider selection.
+- `security` — API key and CORS.
+- `ratelimit` — Redis and Bucket4j limiter per API key / client IP.
+- `idempotency` — Redis `Idempotency-Key` handling for `/chat` and request body size limit.
+- `common` — shared Redis configuration.
   
 ## Tech Stack
 
-Java 21, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL, Bucket4j, Caffeine, Redis, Gradle
+Java 21, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL (PGVector, Flyway), Bucket4j, Caffeine, Redis, Gradle
 
 ## How to Run
 
@@ -41,7 +46,7 @@ Copy `.env.example` to `.env` and fill with your own data.
 or just straight
 
 ```powershell
-./gradlew bootJar; docker compose up -d --build
+./gradlew clean bootJar && docker compose build --no-cache && docker compose up -d
 ```
 
 **2. Send a query**
@@ -50,14 +55,13 @@ Every request needs a `B-API-Key` header (matching `BARBERSHOP_API_KEY`), a `con
 (a UUID, used to keep chat history scoped per conversation), and an `Idempotency-Key` header.
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/barbershops/chat \
+curl -X POST http://localhost:8080/api/v1/barbershops/{cechownia}/chat \
   -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: idempotency-key-here' \
   -H 'B-API-Key: your-api-key-here' \
   -d '{
         "conversationId": "conversation-id-here",
         "question": "Can you list staff that works in this barbershop?",
-        "barbershopName": "STARY_CYRULIK",
         "barbershopCity": "Gdansk"
       }'
 ```

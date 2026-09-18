@@ -1,7 +1,0 @@
-FROM eclipse-temurin:21-jre
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-RUN groupadd -r mcpclient && useradd -r -g mcpclient mcpclient
-WORKDIR /mcpClient
-COPY --chown=mcpclient:mcpclient build/libs/*.jar mcpClient.jar
-USER mcpclient
-ENTRYPOINT ["java", "-jar", "mcpClient.jar"]

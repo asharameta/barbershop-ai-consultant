@@ -25,14 +25,8 @@ jobs:
       - name: Build
         run: ./gradlew build -x test
 
-      - name: Validate MCPClient image builds
+      - name: Validate image builds
         uses: docker/build-push-action@v6
         with:
-          context: ./MCPClient
-          push: false
-
-      - name: Validate MCPServer image builds
-        uses: docker/build-push-action@v6
-        with:
-          context: ./MCPServer
+          context: .
           push: false

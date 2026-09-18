@@ -1,2 +1,1 @@
 rootProject.name = 'barbershop-ai-consultant'
-include 'MCPClient', 'MCPServer'
