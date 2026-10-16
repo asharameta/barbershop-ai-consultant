@@ -43,6 +43,11 @@ class RateLimiter extends OncePerRequestFilter {
         }
     }
 
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getRequestURI().startsWith("/actuator");
+    }
+
 
     private String resolveKey(HttpServletRequest request){
         String apiKey = request.getHeader("B-API-Key");
