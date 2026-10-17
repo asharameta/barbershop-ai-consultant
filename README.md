@@ -29,7 +29,7 @@ A single modulith(modular monolith) Spring Boot application:
   
 ## Tech Stack
 
-Java 21, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL (PGVector, Flyway), Bucket4j, Caffeine, Redis, Gradle
+Java 25, Spring Boot 4.1.0, Spring AI 2.0, OpenAI API, RAG, MCP, PostgreSQL (PGVector, Flyway), Bucket4j, Caffeine, Redis, Gradle
 
 ## How to Run
 

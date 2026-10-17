@@ -9,7 +9,7 @@ version = '0.0.1'
 description = 'AI Booking Assistant'
 
 java {
-    sourceCompatibility = '21'
+    sourceCompatibility = '25'
 }
 
 repositories {
