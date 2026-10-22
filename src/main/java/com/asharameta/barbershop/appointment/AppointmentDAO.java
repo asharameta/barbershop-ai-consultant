@@ -26,7 +26,7 @@ class AppointmentDAO {
 
     private Appointment insertAppointment(Appointment appointment){
         String sql = """
-            INSERT INTO appointments (barber_name, client_name, phone_number, comment, date_time, status)
+            INSERT INTO appointment (barber_name, client_name, phone_number, comment, date_time, status)
             VALUES (?, ?, ?, ?, ?, ?)
             RETURNING *
             """;
@@ -54,7 +54,7 @@ class AppointmentDAO {
     }
 
     Appointment cancelAppointment(String clientName, String phoneNumber){
-        String sql = "UPDATE appointments SET status = ? WHERE client_name = ? AND phone_number = ? AND status = ? RETURNING *";
+        String sql = "UPDATE appointment SET status = ? WHERE client_name = ? AND phone_number = ? AND status = ? RETURNING *";
         try{
             return jdbcTemplate.queryForObject(sql,
                     rowMapper,
@@ -69,13 +69,13 @@ class AppointmentDAO {
     }
 
     List<Appointment> getClientAppointments(String phoneNumber){
-        String sql = "SELECT * FROM appointments WHERE phone_number = ?";
+        String sql = "SELECT * FROM appointment WHERE phone_number = ?";
 
         return jdbcTemplate.query(sql, rowMapper, phoneNumber);
     }
 
     List<Appointment> getBarberSchedule(String barberName, String date){
-        String sql = "SELECT barber_name, date_time FROM appointments WHERE barber_name = ? AND DATE(date_time) = ? AND status = ? ORDER BY date_time";
+        String sql = "SELECT barber_name, date_time FROM appointment WHERE barber_name = ? AND DATE(date_time) = ? AND status = ? ORDER BY date_time";
         LocalDate localDate = LocalDate.parse(date);
         return jdbcTemplate.query(sql, rowMapper, barberName, localDate, BookStatus.BOOKED.name());
     }
