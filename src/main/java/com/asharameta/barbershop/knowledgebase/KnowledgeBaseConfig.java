@@ -26,7 +26,7 @@ public class KnowledgeBaseConfig {
     @Bean
     public VectorStore vectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel){
         return PgVectorStore.builder(jdbcTemplate, embeddingModel)
-                .initializeSchema(true)
+                .initializeSchema(false)
                 .dimensions(dimensions)
                 .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
                 .indexType(PgVectorStore.PgIndexType.HNSW)
