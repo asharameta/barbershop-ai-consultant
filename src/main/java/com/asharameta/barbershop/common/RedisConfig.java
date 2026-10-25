@@ -33,5 +33,4 @@ class RedisConfig {
         return template;
     }
 
-
 }

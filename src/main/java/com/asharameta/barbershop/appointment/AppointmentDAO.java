@@ -1,5 +1,7 @@
 package com.asharameta.barbershop.appointment;
 
+import com.asharameta.barbershop.appointment.model.Appointment;
+import com.asharameta.barbershop.appointment.model.BookStatus;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Repository
@@ -33,11 +36,11 @@ class AppointmentDAO {
 
         return jdbcTemplate.queryForObject(sql,
                 rowMapper,
-                appointment.getBarberName(),
+                appointment.getBarberId(),
                 appointment.getClientName(),
-                appointment.getPhoneNumber(),
+                appointment.getClientPhoneNumber(),
                 appointment.getComment(),
-                appointment.getDateTime(),
+                appointment.getStartsAt(),
                 BookStatus.BOOKED.name()
         );
     }
@@ -48,7 +51,7 @@ class AppointmentDAO {
         if(cancelledAppointment == null){
             return null;
         }
-        newAppointment.setBarberName(cancelledAppointment.getBarberName());
+        newAppointment.setBarberId(cancelledAppointment.getBarberId());
         newAppointment.setComment(cancelledAppointment.getComment());
         return bookAppointment(newAppointment);
     }
@@ -82,12 +85,15 @@ class AppointmentDAO {
 
     private final RowMapper<Appointment> rowMapper =
             (rs, rowNum) -> Appointment.builder()
-                    .id(rs.getInt("id"))
-                    .barberName(rs.getString("barber_name"))
+                    .id(rs.getLong("id"))
                     .clientName(rs.getString("client_name"))
-                    .phoneNumber(rs.getString("phone_number"))
+                    .clientPhoneNumber(rs.getString("client_phone_number"))
                     .comment(rs.getString("comment"))
-                    .dateTime(rs.getTimestamp("date_time").toLocalDateTime())
+                    .startsAt(rs.getObject("starts_at",OffsetDateTime.class))
                     .status(BookStatus.valueOf(rs.getString("status")))
+                    .endsAt(rs.getObject("ends_at",OffsetDateTime.class))
+                    .barberId(rs.getLong("barber_id"))
+                    .createdAt(rs.getObject("created_at",OffsetDateTime.class))
+                    .serviceId(rs.getLong("service_id"))
                     .build();
 }

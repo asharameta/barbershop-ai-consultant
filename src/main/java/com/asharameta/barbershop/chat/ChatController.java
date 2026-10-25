@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -27,7 +28,7 @@ class ChatController {
         this.objectMapper = objectMapper;
     }
 
-    @PostMapping("/{barbershop}/chat")
+    @PostMapping(path = "/{barbershop}/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     ResponseEntity<Answer> chat(
             @Pattern(regexp = "^[A-Za-z0-9-_]{1,128}$") @RequestHeader(value = "Idempotency-Key") String idempotencyKey,
             @Pattern(regexp = "^[\\p{L}0-9 _-]{1,100}$") @PathVariable("barbershop") String barbershopName,
