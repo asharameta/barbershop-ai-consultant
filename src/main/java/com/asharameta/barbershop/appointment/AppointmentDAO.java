@@ -1,86 +1,117 @@
 package com.asharameta.barbershop.appointment;
 
-import com.asharameta.barbershop.appointment.model.Appointment;
-import com.asharameta.barbershop.appointment.model.BookStatus;
+import com.asharameta.barbershop.appointment.BookingResult.*;
 import lombok.AllArgsConstructor;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.dao.EmptyResultDataAccessException;
+import org.postgresql.util.PSQLException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @AllArgsConstructor
 class AppointmentDAO {
+    private static final String OVERLAP_CONSTRAINT = "no_overlapping_appointments";
+    private static final String EXCLUSION_VIOLATION = "23P01";
+
     private final JdbcTemplate jdbcTemplate;
 
-    Appointment bookAppointment(Appointment appointment){
-        try{
-           return insertAppointment(appointment);
-        }catch (DuplicateKeyException e){
-            return Appointment.builder().status(BookStatus.UNAVAILABLE).build();
-        }
-    }
+    record ClientAppointment(long id, String barber, OffsetDateTime startsAt) {}
 
-    private Appointment insertAppointment(Appointment appointment){
+    record BusyTime(OffsetDateTime startsAt, OffsetDateTime endsAt) {}
+
+    BookingResult book(long barbershopId, String barberName, String barberSurname, String clientName,
+                       String phoneNumber, String comment, OffsetDateTime startsAt, OffsetDateTime endsAt) {
         String sql = """
-            INSERT INTO appointment (barber_name, client_name, phone_number, comment, date_time, status)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO appointment (barber_id, client_name, client_phone_number, comment, starts_at, ends_at, status)
+            SELECT id, ?, ?, ?, ?, ?, 'BOOKED'
+            FROM barber
+            WHERE barbershop_id = ? AND lower(name) = lower(?) AND lower(surname) = lower(?) AND active
             RETURNING *
             """;
-
-        return jdbcTemplate.queryForObject(sql,
-                rowMapper,
-                appointment.getBarberId(),
-                appointment.getClientName(),
-                appointment.getClientPhoneNumber(),
-                appointment.getComment(),
-                appointment.getStartsAt(),
-                BookStatus.BOOKED.name()
-        );
-    }
-
-    @Transactional
-    Appointment rescheduleAppointment(String clientName, String phoneNumber, Appointment newAppointment){
-        var cancelledAppointment = cancelAppointment(clientName, phoneNumber);
-        if(cancelledAppointment == null){
-            return null;
+        try {
+            return jdbcTemplate.query(sql, rowMapper, clientName, phoneNumber, comment, startsAt, endsAt,
+                            barbershopId, barberName, barberSurname)
+                    .stream().findFirst()
+                    .<BookingResult>map(Booked::new)
+                    .orElseGet(BarberNotFound::new);
+        } catch (DataAccessException e) {
+            if (isSlotConflict(e)) return new SlotTaken();
+            throw e;
         }
-        newAppointment.setBarberId(cancelledAppointment.getBarberId());
-        newAppointment.setComment(cancelledAppointment.getComment());
-        return bookAppointment(newAppointment);
     }
 
-    Appointment cancelAppointment(String clientName, String phoneNumber){
-        String sql = "UPDATE appointment SET status = ? WHERE client_name = ? AND phone_number = ? AND status = ? RETURNING *";
-        try{
-            return jdbcTemplate.queryForObject(sql,
-                    rowMapper,
-                    BookStatus.CANCELLED.name(),
-                    clientName,
-                    phoneNumber,
-                    BookStatus.BOOKED.name());
-        }catch(EmptyResultDataAccessException ex){
-            return null;
+    Optional<BookingResult> reschedule(long barbershopId, long appointmentId, String phoneNumber,
+                                       OffsetDateTime startsAt, OffsetDateTime endsAt) {
+        String sql = """
+            UPDATE appointment a SET starts_at = ?, ends_at = ?
+            FROM barber b
+            WHERE a.id = ? AND a.client_phone_number = ? AND a.status = 'BOOKED' AND a.starts_at > now()
+              AND b.id = a.barber_id AND b.barbershop_id = ?
+            RETURNING a.*
+            """;
+        try {
+            return jdbcTemplate.query(sql, rowMapper, startsAt, endsAt, appointmentId, phoneNumber, barbershopId)
+                    .stream().findFirst()
+                    .map(Booked::new);
+        } catch (DataAccessException e) {
+            if (isSlotConflict(e)) return Optional.of(new SlotTaken());
+            throw e;
         }
-
     }
 
-    List<Appointment> getClientAppointments(String phoneNumber){
-        String sql = "SELECT * FROM appointment WHERE phone_number = ?";
-
-        return jdbcTemplate.query(sql, rowMapper, phoneNumber);
+    Optional<Appointment> cancel(long barbershopId, long appointmentId, String phoneNumber) {
+        String sql = """
+            UPDATE appointment a SET status = 'CANCELLED'
+            FROM barber b
+            WHERE a.id = ? AND a.client_phone_number = ? AND a.status = 'BOOKED' AND a.starts_at > now()
+              AND b.id = a.barber_id AND b.barbershop_id = ?
+            RETURNING a.*
+            """;
+        return jdbcTemplate.query(sql, rowMapper, appointmentId, phoneNumber, barbershopId).stream().findFirst();
     }
 
-    List<Appointment> getBarberSchedule(String barberName, String date){
-        String sql = "SELECT barber_name, date_time FROM appointment WHERE barber_name = ? AND DATE(date_time) = ? AND status = ? ORDER BY date_time";
-        LocalDate localDate = LocalDate.parse(date);
-        return jdbcTemplate.query(sql, rowMapper, barberName, localDate, BookStatus.BOOKED.name());
+    List<ClientAppointment> clientAppointments(long barbershopId, String phoneNumber) {
+        String sql = """
+            SELECT a.id, b.name || ' ' || b.surname AS barber, a.starts_at
+            FROM appointment a JOIN barber b ON b.id = a.barber_id
+            WHERE b.barbershop_id = ? AND a.client_phone_number = ? AND a.status = 'BOOKED' AND a.ends_at > now()
+            ORDER BY a.starts_at
+            """;
+        return jdbcTemplate.query(sql,
+                (rs, n) -> new ClientAppointment(rs.getLong("id"), rs.getString("barber"),
+                        rs.getObject("starts_at", OffsetDateTime.class)),
+                barbershopId, phoneNumber);
+    }
+
+    List<BusyTime> busyTimes(long barbershopId, String barberName, String barberSurname,
+                             OffsetDateTime from, OffsetDateTime to) {
+        String sql = """
+            SELECT a.starts_at, a.ends_at
+            FROM appointment a JOIN barber b ON b.id = a.barber_id
+            WHERE b.barbershop_id = ? AND lower(b.name) = lower(?) AND lower(b.surname) = lower(?)
+              AND a.status <> 'CANCELLED'
+              AND tstzrange(a.starts_at, a.ends_at) && tstzrange(?, ?)
+            ORDER BY a.starts_at
+            """;
+        return jdbcTemplate.query(sql,
+                (rs, n) -> new BusyTime(rs.getObject("starts_at", OffsetDateTime.class),
+                        rs.getObject("ends_at", OffsetDateTime.class)),
+                barbershopId, barberName, barberSurname, from, to);
+    }
+
+    private static boolean isSlotConflict(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof PSQLException p && EXCLUSION_VIOLATION.equals(p.getSQLState())) {
+                var details = p.getServerErrorMessage();
+                return details != null && OVERLAP_CONSTRAINT.equals(details.getConstraint());
+            }
+        }
+        return false;
     }
 
     private final RowMapper<Appointment> rowMapper =
@@ -89,11 +120,11 @@ class AppointmentDAO {
                     .clientName(rs.getString("client_name"))
                     .clientPhoneNumber(rs.getString("client_phone_number"))
                     .comment(rs.getString("comment"))
-                    .startsAt(rs.getObject("starts_at",OffsetDateTime.class))
+                    .startsAt(rs.getObject("starts_at", OffsetDateTime.class))
                     .status(BookStatus.valueOf(rs.getString("status")))
-                    .endsAt(rs.getObject("ends_at",OffsetDateTime.class))
+                    .endsAt(rs.getObject("ends_at", OffsetDateTime.class))
                     .barberId(rs.getLong("barber_id"))
-                    .createdAt(rs.getObject("created_at",OffsetDateTime.class))
-                    .serviceId(rs.getLong("service_id"))
+                    .createdAt(rs.getObject("created_at", OffsetDateTime.class))
+                    .serviceId(rs.getObject("service_id", Long.class))
                     .build();
 }

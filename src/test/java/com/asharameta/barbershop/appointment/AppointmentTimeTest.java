@@ -9,7 +9,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AppointmentTimeTest {
     private static final ZoneId WARSAW = ZoneId.of("Europe/Warsaw");
     private final Clock fixed = Clock.fixed(Instant.parse("2032-06-01T10:00:00Z"), WARSAW);
-    private final AppointmentTime appointmentTime = new AppointmentTime(fixed);
+    private final AppointmentTime appointmentTime = new AppointmentTime(fixed, "10:00", "20:00");
+    private static final Duration SLOT = Duration.ofMinutes(45);
 
     @Test
     public void summerTimeGivesPlusTwoOffset(){
@@ -52,5 +53,25 @@ public class AppointmentTimeTest {
         var wrongOffset = appointmentTime.toBShopOffsetTime(localWrongDateTime);
 
         assertTrue(appointmentTime.isMomentPassed(wrongOffset));
+    }
+
+    private boolean withinHours(int hour, int minute){
+        return appointmentTime.isWithinWorkingHours(
+                appointmentTime.toBShopOffsetTime(LocalDateTime.of(2032, 6, 2, hour, minute)), SLOT);
+    }
+
+    @Test
+    public void slotsInsideWorkingHoursAreAllowed(){
+        assertTrue(withinHours(10, 0));
+        assertTrue(withinHours(19, 15));
+    }
+
+    @Test
+    public void slotsOutsideWorkingHoursAreRejected(){
+        assertFalse(withinHours(9, 59));
+        assertFalse(withinHours(19, 16));
+        assertFalse(withinHours(20, 0));
+        assertFalse(appointmentTime.isWithinWorkingHours(
+                appointmentTime.toBShopOffsetTime(LocalDateTime.of(2032, 3, 28, 2, 30)), SLOT)); // DST gap hour is never bookable
     }
 }

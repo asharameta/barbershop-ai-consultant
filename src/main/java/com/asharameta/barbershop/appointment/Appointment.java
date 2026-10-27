@@ -1,4 +1,4 @@
-package com.asharameta.barbershop.appointment.model;
+package com.asharameta.barbershop.appointment;
 
 import lombok.*;
 import java.time.OffsetDateTime;
@@ -7,7 +7,7 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Appointment {
+class Appointment {
     private Long id;
     private String clientName;
     private String clientPhoneNumber;
