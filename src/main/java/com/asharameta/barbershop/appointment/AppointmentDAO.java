@@ -17,6 +17,7 @@ import java.util.Optional;
 class AppointmentDAO {
     private static final String OVERLAP_CONSTRAINT = "no_overlapping_appointments";
     private static final String EXCLUSION_VIOLATION = "23P01";
+    private static final String DEADLOCK = "40P01";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -106,9 +107,12 @@ class AppointmentDAO {
 
     private static boolean isSlotConflict(Throwable e) {
         for (Throwable t = e; t != null; t = t.getCause()) {
-            if (t instanceof PSQLException p && EXCLUSION_VIOLATION.equals(p.getSQLState())) {
-                var details = p.getServerErrorMessage();
-                return details != null && OVERLAP_CONSTRAINT.equals(details.getConstraint());
+            if (t instanceof PSQLException p) {
+                if (DEADLOCK.equals(p.getSQLState())) return true;
+                if (EXCLUSION_VIOLATION.equals(p.getSQLState())) {
+                    var details = p.getServerErrorMessage();
+                    return details != null && OVERLAP_CONSTRAINT.equals(details.getConstraint());
+                }
             }
         }
         return false;
@@ -125,6 +129,6 @@ class AppointmentDAO {
                     .endsAt(rs.getObject("ends_at", OffsetDateTime.class))
                     .barberId(rs.getLong("barber_id"))
                     .createdAt(rs.getObject("created_at", OffsetDateTime.class))
-                    .serviceId(rs.getObject("service_id", Long.class))
+                    .groomingId(rs.getObject("grooming_id", Long.class))
                     .build();
 }

@@ -5,12 +5,7 @@ import com.asharameta.barbershop.appointment.AppointmentDAO.ClientAppointment;
 import com.asharameta.barbershop.appointment.BookingResult.BarberNotFound;
 import com.asharameta.barbershop.appointment.BookingResult.Booked;
 import com.asharameta.barbershop.appointment.BookingResult.SlotTaken;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -30,7 +25,6 @@ import java.util.stream.Collectors;
 class AppointmentService {
     static final String SHOP_ID = "barbershopId";
 
-    private static final String PHONE = "^\\+?[0-9]{7,15}$";
     private static final String BAD_FORMAT = "Invalid date/time format: %s. Expected ISO format, e.g. 2025-04-01T14:00.";
 
     private final AppointmentDAO appointmentDAO;
@@ -44,14 +38,13 @@ class AppointmentService {
         this.slot = Duration.ofMinutes(slotMinutes);
     }
 
-    @Tool(description = "Book an appointment with a barber of this barbershop. Needs the barber's first name and surname, client name, client phone number, optional comment and the date and time of the appointment")
-    public String bookAppointment(
-            @ToolParam(description = "barber first name") @NotBlank @Size(max = 100) String barberName,
-            @ToolParam(description = "barber surname") @NotBlank @Size(max = 100) String barberSurname,
-            @ToolParam(description = "client name") @NotBlank @Size(max = 100) String clientName,
-            @ToolParam(description = "client phone number") @NotBlank @Pattern(regexp = PHONE) String phoneNumber,
-            @ToolParam(description = "optional comment e.g. just a trim", required = false) @Size(max = 500) String comment,
-            @ToolParam(description = "date and time in ISO format e.g. 2025-04-01T14:00") @NotBlank String dateTime,
+    String bookAppointment(
+            String barberName,
+            String barberSurname,
+            String clientName,
+            String phoneNumber,
+            String comment,
+            String dateTime,
             ToolContext toolContext
     ) {
         OffsetDateTime start;
@@ -72,11 +65,10 @@ class AppointmentService {
         };
     }
 
-    @Tool(description = "Move an existing appointment to another date and time, identified by appointment id and the client's phone number")
-    public String rescheduleAppointment(
-            @ToolParam(description = "appointment id") long appointmentId,
-            @ToolParam(description = "client phone number") @NotBlank @Pattern(regexp = PHONE) String phoneNumber,
-            @ToolParam(description = "new date and time in ISO format e.g. 2025-04-01T14:00") @NotBlank String dateTime,
+    String rescheduleAppointment(
+            long appointmentId,
+            String phoneNumber,
+            String dateTime,
             ToolContext toolContext
     ) {
         OffsetDateTime start;
@@ -97,10 +89,9 @@ class AppointmentService {
                 .orElse("No upcoming booked appointment with this id for this phone number.");
     }
 
-    @Tool(description = "Cancel an appointment, identified by appointment id and the client's phone number")
-    public String cancelAppointment(
-            @ToolParam(description = "appointment id") long appointmentId,
-            @ToolParam(description = "client phone number") @NotBlank @Pattern(regexp = PHONE) String phoneNumber,
+    String cancelAppointment(
+            long appointmentId,
+            String phoneNumber,
             ToolContext toolContext
     ) {
         return appointmentDAO.cancel(shopId(toolContext), appointmentId, phoneNumber)
@@ -108,9 +99,8 @@ class AppointmentService {
                 .orElse("No upcoming booked appointment with this id for this phone number.");
     }
 
-    @Tool(description = "List the upcoming appointments of a client using their phone number")
-    public String getClientAppointments(
-            @ToolParam(description = "client phone number") @NotBlank @Pattern(regexp = PHONE) String phoneNumber,
+    String getClientAppointments(
+            String phoneNumber,
             ToolContext toolContext
     ) {
         List<ClientAppointment> appointments = appointmentDAO.clientAppointments(shopId(toolContext), phoneNumber);
@@ -120,11 +110,10 @@ class AppointmentService {
                 .collect(Collectors.joining("\n"));
     }
 
-    @Tool(description = "Show the times a barber is already booked on a given day, so free times can be suggested")
-    public String getBusyTimes(
-            @ToolParam(description = "barber first name") @NotBlank @Size(max = 100) String barberName,
-            @ToolParam(description = "barber surname") @NotBlank @Size(max = 100) String barberSurname,
-            @ToolParam(description = "date in format YYYY-MM-DD") @NotBlank String date,
+    String getBusyTimes(
+            String barberName,
+            String barberSurname,
+            String date,
             ToolContext toolContext
     ) {
         LocalDate day;

@@ -17,5 +17,5 @@ class Appointment {
     private OffsetDateTime endsAt;
     private Long barberId;
     private OffsetDateTime createdAt;
-    private Long serviceId;
+    private Long groomingId;
 }

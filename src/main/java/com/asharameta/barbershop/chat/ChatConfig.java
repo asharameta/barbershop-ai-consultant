@@ -3,6 +3,7 @@ package com.asharameta.barbershop.chat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
@@ -12,6 +13,8 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 class ChatConfig {
@@ -30,7 +33,7 @@ class ChatConfig {
 
     @Bean
     ChatClient chatClient(ChatModel chatModel,
-                                 ToolCallbackProvider tools,
+                                 List<ToolCallbackProvider> tools,
                                  VectorStore vectorStore,
                                  ChatMemory chatMemory)
     {
@@ -39,15 +42,18 @@ class ChatConfig {
                 .similarityThreshold(0.3)
                 .build();
 
+
         var qaAdvisor = QuestionAnswerAdvisor.builder(vectorStore)
                 .searchRequest(searchRequest)
                 .build();
 
         var cmAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
 
+        var loggerAdvisor = SimpleLoggerAdvisor.builder().build();
+
         return ChatClient.builder(chatModel)
                 .defaultSystem(buildSystemPrompt())
-                .defaultAdvisors(qaAdvisor, cmAdvisor)
+                .defaultAdvisors(cmAdvisor, qaAdvisor, loggerAdvisor)
                 .defaultTools(tools)
                 .build();
     }

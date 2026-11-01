@@ -7,9 +7,8 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 class AppointmentConfig {
-    // lives here because AppointmentService is package-private
     @Bean
-    ToolCallbackProvider appointmentTools(AppointmentService appointmentService) {
-        return MethodToolCallbackProvider.builder().toolObjects(appointmentService).build();
+    ToolCallbackProvider appointmentToolsProvider(AppointmentTools appointmentTools) {
+        return MethodToolCallbackProvider.builder().toolObjects(appointmentTools).build();
     }
 }

@@ -17,7 +17,7 @@ The system combines:
 
 A single modulith(modular monolith) Spring Boot application:
 
-- `chat` — REST endpoint `POST /api/v1/chat`, `ChatClient` wiring (RAG advisor + bounded chat memory + tools),
+- `chat` — REST endpoint `POST /api/v1/barbershops/{barbershopName}/chat`, `ChatClient` wiring (RAG advisor + bounded chat memory + tools),
   chat history per `conversationId` in a bounded in-memory cache (Caffeine, evicted after 1h / max conversations).
 - `knowledgebase` — loads the txt knowledge base into PGVector on startup
 - `appointment` — booking logic in PostgreSQL (Flyway migrations).
@@ -51,17 +51,17 @@ or just straight
 
 **2. Send a query**
 
-Every request needs a `B-API-Key` header (matching `BARBERSHOP_API_KEY`), a `conversationId`
+Every request needs a `B-API-Key` header (matching `BARBERSHOP_API_KEY`, starting with bearer prefix `esk_`), a `conversationId`
 (a UUID, used to keep chat history scoped per conversation), and an `Idempotency-Key` header.
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/barbershops/{cechownia}/chat \
+curl -X POST http://localhost:8080/api/v1/barbershops/{barbershopName}/chat \
   -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: idempotency-key-here' \
-  -H 'B-API-Key: your-api-key-here' \
+  -H 'Idempotency-Key: {idempotencyKey}' \
+  -H 'B-API-Key: {yourApiKey}' \
   -d '{
-        "conversationId": "conversation-id-here",
-        "question": "Can you list staff that works in this barbershop?",
-        "barbershopCity": "Gdansk"
+        "conversationId": {conversationId},
+        "question": {youQuestionGoes},
+        "barbershopCity": {cityName}
       }'
 ```

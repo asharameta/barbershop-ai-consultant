@@ -83,7 +83,7 @@ class AppointmentDAOIntegrationTest {
 
         assertEquals(BookStatus.BOOKED, result.appointment().getStatus());
         assertEquals(at(14, 45).toInstant(), result.appointment().getEndsAt().toInstant());
-        assertNull(result.appointment().getServiceId());
+        assertNull(result.appointment().getGroomingId());
     }
 
     @Test
