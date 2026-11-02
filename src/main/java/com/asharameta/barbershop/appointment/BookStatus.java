@@ -1,7 +1,7 @@
 package com.asharameta.barbershop.appointment;
 
-public enum BookStatus {
+// stored by name in appointment.status (see the valid_status check)
+enum BookStatus {
     BOOKED,
-    CANCELLED,
-    UNAVAILABLE;
+    CANCELLED
 }

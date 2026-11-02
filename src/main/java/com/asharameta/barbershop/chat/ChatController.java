@@ -1,5 +1,7 @@
 package com.asharameta.barbershop.chat;
 
+import com.asharameta.barbershop.appointment.BarbershopDAO;
+import com.asharameta.barbershop.appointment.BarbershopDAO.Shop;
 import com.asharameta.barbershop.idempotency.IdempotencyDTO;
 import com.asharameta.barbershop.idempotency.IdempotencyService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -10,8 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Locale;
+import org.springframework.web.server.ResponseStatusException;
 
 @Validated
 @RestController
@@ -20,11 +21,14 @@ class ChatController {
     private final IdempotencyService idempotencyService;
     private final ChatService chatService;
     private final ObjectMapper objectMapper;
+    private final BarbershopDAO barbershopDAO;
 
-    ChatController(ChatService chatService, IdempotencyService idempotencyService, ObjectMapper objectMapper) {
+    ChatController(ChatService chatService, IdempotencyService idempotencyService, ObjectMapper objectMapper,
+                   BarbershopDAO barbershopDAO) {
         this.chatService = chatService;
         this.idempotencyService = idempotencyService;
         this.objectMapper = objectMapper;
+        this.barbershopDAO = barbershopDAO;
     }
 
     @PostMapping("/{barbershop}/chat")
@@ -32,6 +36,9 @@ class ChatController {
             @Pattern(regexp = "^[A-Za-z0-9-_]{1,128}$") @RequestHeader(value = "Idempotency-Key") String idempotencyKey,
             @Pattern(regexp = "^[\\p{L}0-9 _-]{1,100}$") @PathVariable("barbershop") String barbershopName,
             @Valid @RequestBody Question question) throws JsonProcessingException {
+
+        Shop shop = barbershopDAO.find(question.barbershopCity(), barbershopName)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unknown barbershop"));
 
         IdempotencyDTO claimed = idempotencyService.claim(question.toString(), idempotencyKey);
 
@@ -43,13 +50,10 @@ class ChatController {
                     .body(objectMapper.readValue(claimed.responseBody(), Answer.class));
 
             case CLAIMED -> {
-                String filter = "barbershop_name == '%s' AND barbershop_city == '%s'".formatted(
-                        barbershopName.toLowerCase(Locale.ROOT),
-                        question.barbershopCity().toLowerCase(Locale.ROOT)
-                );
+                String filter = "barbershop_name == '%s' AND barbershop_city == '%s'".formatted(shop.slug(), shop.citySlug());
 
                 try{
-                    Answer answer = new Answer(chatService.ask(question.question(), question.conversationId(), filter));
+                    Answer answer = new Answer(chatService.ask(question.question(), question.conversationId().toString(), shop.id(), filter));
                     idempotencyService.complete(idempotencyKey, question.toString(), objectMapper.writeValueAsString(answer));
                     yield ResponseEntity.status(HttpStatus.OK).body(answer);
                 }catch (RuntimeException e){

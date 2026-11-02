@@ -16,7 +16,7 @@ class BoundedChatMemory implements ChatMemoryRepository {
     private Cache<String, List<Message>> cache;
     private final int maxConversations;
 
-    BoundedChatMemory(@Value("${chatmemory.max-conversations}") int maxConversations){
+    BoundedChatMemory(@Value("${chatmemory.max-conversations}") int maxConversations) {
         this.maxConversations = maxConversations;
     }
 

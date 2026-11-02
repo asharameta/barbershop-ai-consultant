@@ -1,19 +1,21 @@
 package com.asharameta.barbershop.appointment;
 
 import lombok.*;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Appointment {
-    private int id;
-    private String barberName;
-    private String barbershop;
+class Appointment {
+    private Long id;
     private String clientName;
-    private String phoneNumber;
+    private String clientPhoneNumber;
     private String comment;
-    private LocalDateTime dateTime;
+    private OffsetDateTime startsAt;
     private BookStatus status;
+    private OffsetDateTime endsAt;
+    private Long barberId;
+    private OffsetDateTime createdAt;
+    private Long groomingId;
 }
