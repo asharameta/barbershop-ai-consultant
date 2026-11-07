@@ -45,7 +45,7 @@ class BarbershopFileParserTest {
     @ParameterizedTest
     @MethodSource("validCases")
     void parseFileName_validInput_returnsMetadata(String filename, String name, String city, String category){
-        BarbershopFileParser.BarbershopMetadata barbershopMetadata = BarbershopFileParser.parseFileName(filename);
+        BarbershopMetadata barbershopMetadata = BarbershopFileParser.parseFileName(filename);
 
         assertNotNull(barbershopMetadata);
         assertEquals(name, barbershopMetadata.name());

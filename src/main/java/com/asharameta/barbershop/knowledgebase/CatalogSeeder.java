@@ -1,6 +1,5 @@
 package com.asharameta.barbershop.knowledgebase;
 
-import com.asharameta.barbershop.knowledgebase.BarbershopFileParser.BarbershopMetadata;
 import com.asharameta.barbershop.knowledgebase.StaffParser.StaffMember;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
