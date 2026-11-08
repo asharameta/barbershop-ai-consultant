@@ -13,7 +13,6 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -28,7 +27,7 @@ class KnowledgeBaseLoaderTest {
     private TextSplitter splitter;
     @Mock
     private ResourcePatternResolver resolver;
-    KnowledgeBaseLoader knowledgeBaseLoader;
+    private KnowledgeBaseLoader knowledgeBaseLoader;
 
     @BeforeEach
     void init() {
@@ -56,8 +55,9 @@ class KnowledgeBaseLoaderTest {
     void testDocumentsIsNotEmpty() throws IOException {
         String filename = "name__city__category.txt";
         when(resolver.getResources(resourcePattern)).thenReturn(new Resource[]{new FakeResource(filename)});
-        when(splitter.split(anyList())).thenAnswer(inv -> inv.getArgument(0));
-        var documents = knowledgeBaseLoader.loadDocuments();
+        when(splitter.apply(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        var resources = knowledgeBaseLoader.getResources();
+        var documents = knowledgeBaseLoader.getChunks(resources.getFirst());
 
         assertNotEquals(0, documents.size());
     }
@@ -67,8 +67,9 @@ class KnowledgeBaseLoaderTest {
     void testDocumentsHasCorrectData() throws IOException {
         String filename = "name__city__category.txt";
         when(resolver.getResources(resourcePattern)).thenReturn(new Resource[]{new FakeResource(filename)});
-        when(splitter.split(anyList())).thenAnswer(inv -> inv.getArgument(0));
-        var documents = knowledgeBaseLoader.loadDocuments();
+        when(splitter.apply(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        var resources = knowledgeBaseLoader.getResources();
+        var documents = knowledgeBaseLoader.getChunks(resources.getFirst());
 
         Map<String, Object> metadata = documents.getFirst().getMetadata();
         assertEquals("name", metadata.get("barbershop_name"));
@@ -76,30 +77,29 @@ class KnowledgeBaseLoaderTest {
         assertEquals("category", metadata.get("barbershop_category"));
     }
 
-    @DisplayName("Test to check wrong filename")
+    @DisplayName("Wrong filenames are returned with null metadata")
     @Test
     void tryToParseWrongFilenameTest() throws IOException {
         String wrongFilename1 = "name_city___category.txt";
         String wrongFilename2 = "double_name__city__category.txt";
         when(resolver.getResources(resourcePattern)).thenReturn(new Resource[]{new FakeResource(wrongFilename1),new FakeResource(wrongFilename2), new FakeResource(null)});
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> knowledgeBaseLoader.loadDocuments());
+        var resources = knowledgeBaseLoader.getResources();
 
-        assertTrue(ex.getMessage().contains("There are files that do not match the pattern: {barbershop}__{city}__{category}."));
+        assertEquals(3, resources.size());
+        assertTrue(resources.stream().allMatch(r -> r.metadata() == null));
     }
 
     @DisplayName("Test to check wrong resourcePattern")
     @Test
-    void testResolverIOExceptionIsWrappedAsUncheckedIOException() throws IOException {
+    void testResolverIOExceptionIsPropagated() throws IOException {
         var ioException = new IOException("Failed to resolve knowledge base resources for pattern: " + resourcePattern);
         when(resolver.getResources(resourcePattern)).thenThrow(ioException);
 
-        UncheckedIOException exception = assertThrows(UncheckedIOException.class,
-                () -> knowledgeBaseLoader.loadDocuments());
+        IOException exception = assertThrows(IOException.class,
+                () -> knowledgeBaseLoader.getResources());
 
-        assertEquals(ioException, exception.getCause(), "prove that the exception we get is the one from thenThrow");
-        assertEquals(ioException.getMessage(), exception.getMessage());
+        assertSame(ioException, exception, "prove that the exception we get is the one from thenThrow");
     }
 
     @DisplayName("Test that no resources found throws an IllegalStateException")
@@ -107,7 +107,7 @@ class KnowledgeBaseLoaderTest {
     void testNoResourceFoundException() throws IOException {
         when(resolver.getResources(resourcePattern)).thenReturn(new Resource[0]);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> knowledgeBaseLoader.loadDocuments());
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> knowledgeBaseLoader.getResources());
         assertEquals("No documents found in "+resourcePattern+" directory.", ex.getMessage());
     }
 
@@ -133,10 +133,21 @@ class KnowledgeBaseLoaderTest {
     @Test
     void testTikaReadFailureIsWrappedAsIllegalStateException() throws IOException {
         String filename = "name__city__category.txt";
+        // built by hand: getResources() would fail earlier, in calcContentHash
+        var data = new KnowledgeBaseData(new BrokenResource(filename), "hash", filename,
+                BarbershopFileParser.parseFileName(filename));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> knowledgeBaseLoader.getChunks(data));
+        assertEquals("Failed to read knowledge base document: " + filename, ex.getMessage());
+    }
+
+    @DisplayName("Unreadable file fails while hashing in getResources")
+    @Test
+    void testHashReadFailureIsPropagated() throws IOException {
+        String filename = "name__city__category.txt";
         when(resolver.getResources(resourcePattern)).thenReturn(new Resource[]{new BrokenResource(filename)});
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> knowledgeBaseLoader.loadDocuments());
-        assertEquals("Failed to read knowledge base document: " + filename, ex.getMessage());
+        assertThrows(IOException.class, () -> knowledgeBaseLoader.getResources());
     }
 
 }
