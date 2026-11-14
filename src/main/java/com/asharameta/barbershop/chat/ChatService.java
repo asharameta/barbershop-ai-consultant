@@ -8,10 +8,8 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.time.Clock;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -67,9 +65,8 @@ class ChatService {
 
     private Consumer<ChatClient.PromptSystemSpec> systemSpecConsumer(){
         ZonedDateTime zonedDateTimeNow = ZonedDateTime.now(clock);
-
-        var formattedDate = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withLocale(Locale.ENGLISH)
-                .format(zonedDateTimeNow);
+        String formattedDate = DateTimeFormatter.ofPattern("EEEE, MMMM d, y HH:mm zzzz VV", Locale.ENGLISH)
+                                                .format(zonedDateTimeNow);
 
         return (sysSpec) -> sysSpec.params(
             Map.of("current_full_date", formattedDate)
