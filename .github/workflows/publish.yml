@@ -38,6 +38,7 @@ jobs:
 
   deploy:
     needs: build-and-push
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to VPS
